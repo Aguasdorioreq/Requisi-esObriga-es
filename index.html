@@ -33,6 +33,8 @@ body{margin:0;font-family:Manrope,system-ui,sans-serif;background:var(--bg);colo
 .hero-foot{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-top:16px}
 .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .filters label{font-size:12px;font-weight:700;color:#2c4a6e}
+.filters select{max-width:190px}
+.hero-foot{align-items:flex-start}
 .meta{font-size:12px;color:#2c4a6e;margin-top:12px}
 .meta b{color:var(--navy)}
 /* ---------- conteúdo ---------- */
@@ -108,10 +110,24 @@ tr:hover td{background:#f6fafe}
 .pe img{display:block}
 .pres-nav{position:absolute;bottom:16px;right:20px;display:flex;gap:8px;z-index:3;opacity:.35;transition:.2s}
 .pres-nav:hover{opacity:1}
+/* ---------- login ---------- */
+body.bloq .hero,body.bloq .wrap{display:none}
+#login{display:none;min-height:100vh;align-items:center;justify-content:center;padding:24px;background:radial-gradient(1200px 500px at 85% -10%,#fff 0%,rgba(255,255,255,0) 60%),linear-gradient(135deg,#d9edfc 0%,#bfe0f8 55%,#a9d3f2 100%)}
+body.bloq #login{display:flex}
+.lcard{background:#fff;border-radius:20px;box-shadow:0 20px 50px rgba(11,37,69,.14);padding:34px 32px;width:100%;max-width:400px}
+.lcard h1{font-size:24px;margin:12px 0 6px}
+.lcard label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:16px 0 6px}
+.lcard input{width:100%;padding:11px 12px;font-size:14px}
+.lcard .btn{width:100%;justify-content:center;margin-top:20px;padding:12px}
+.lcard .link{background:none;border:0;color:var(--blue);font:inherit;font-size:13px;font-weight:700;cursor:pointer;margin-top:14px;padding:0}
+.lmsg{font-size:13px;margin-top:14px;line-height:1.5;color:var(--muted)}
+.lmsg.err{color:var(--bad)}
+.user{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:#2c4a6e}
 @media(max-width:760px){.hero{padding:26px 16px 86px}.wrap{padding:0 16px}.grid2{grid-template-columns:1fr}.map-grid{grid-template-columns:1fr}.hero h1{font-size:25px}}
 </style>
 </head>
-<body>
+<body class="bloq">
+<div id="login"><div class="lcard" id="lcard"></div></div>
 <header class="hero"><div class="hero-in">
   <div class="eyebrow"><span class="dot"></span>ÁGUAS DO RIO · JURÍDICO</div>
   <h1>Cumprimento de Obrigações</h1>
@@ -120,6 +136,11 @@ tr:hover td{background:#f6fafe}
   <div class="hero-foot">
     <div class="filters">
       <label>SUP</label><select id="fSup" onchange="setFilt()"></select>
+      <label>Escritório</label><select id="fEsc" onchange="setFilt()"></select>
+      <label>Tipo</label><select id="fTipo" onchange="setFilt()"><option value="">Todos</option><option value="dec">Decisões</option><option value="rio">Decisões – [RIO]</option></select>
+      <label>Com quem</label><select id="fGrupo" onchange="setFilt()"><option value="">Todos</option><option value="int">Time interno (G1 + G2)</option><option>Grupo 1</option><option>Grupo 2</option><option>Escritório</option><option>Em requisição</option><option>Finalizada</option><option>Encerrada</option><option>Outros</option></select>
+      <label>Processo</label><select id="fSit" onchange="setFilt()"></select>
+      <label>Responsável</label><select id="fResp" onchange="setFilt()" style="max-width:200px"></select>
       <label>Requisições de</label><input type="date" id="fDe" onchange="setFilt()">
       <label>até</label><input type="date" id="fAte" onchange="setFilt()">
       <button class="btn sm light" onclick="clearFilt()">Limpar</button>
@@ -130,7 +151,7 @@ tr:hover td{background:#f6fafe}
       <button class="btn" onclick="apresentar()"><span data-i="play"></span>Apresentar</button>
     </div>
   </div>
-  <div class="meta" id="meta">Carregando…</div>
+  <div class="hero-foot" style="margin-top:10px"><div class="meta" id="meta" style="margin:0">Carregando…</div><div class="user" id="user"></div></div>
 </div></header>
 <main class="wrap"><div id="alert"></div><div id="view"></div></main>
 <div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
@@ -139,7 +160,7 @@ tr:hover td{background:#f6fafe}
 
 <script>
 /* ===================== Conexão ===================== */
-const VERSAO = '2026.11.06-d';
+const VERSAO = '2026.11.07-b';
 const SB_URL = 'https://ouhaiffxwxucmesprbjr.supabase.co';
 const SB_KEY = 'sb_publishable_pD8U39Nl4xhC-95t-1FQvw_giOSi7le';
 let sb = null;
@@ -147,7 +168,7 @@ try { sb = supabase.createClient(SB_URL, SB_KEY); } catch (e) { console.error(e)
 
 const S = { req:[], proc:[], os:[], hist:[], rev:[], pessoas:[], cargas:[], config:{}, osMap:new Map(), procMap:new Map(),
   histBy:new Map(), reqMap:new Map(), mcache:new Map(), tables:{}, charts:{}, pch:{}, pcfg:{}, gran:{ent:'mes', rev:'mes'},
-  filt:{sup:'', de:'', ate:''}, baseGrupo:'', pending:null, pi:0, snaps:[], blobs:[], modelo:null };
+  filt:{}, escSt:'', baseGrupo:'', pending:null, pi:0, snaps:[], blobs:[], modelo:null };
 const C = { navy:'#0b2545', blue:'#1d4e89', mid:'#3a6ea5', sky:'#7fb8e6', pastel:'#a9d3f2', baby:'#cfe6f7', warn:'#e0a526', bad:'#c0392b', ok:'#2f8f5b', gray:'#c9d3df' };
 const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 const LIM = { dia:60, semana:26, mes:36 };
@@ -307,7 +328,12 @@ function enrich(r){
   r._team = ms.length > 0;
   r._grupo = derivaGrupo(r, ms);
   r._resp = respDisplay(r, ms, r._grupo);
-  r._g2 = r._grupo==='Grupo 2' ? (ms.find(x=>x.grupo==='Grupo 2') || g2PorSup(r._sup)) : null;
+  // Grupo 2: a responsável é a ponto focal da SUP do processo; o nome no Projuris fica registrado à parte
+  const g2Nome = ms.find(x=>x.grupo==='Grupo 2') || null;
+  r._g2 = r._grupo==='Grupo 2' ? (g2PorSup(r._sup) || g2Nome) : null;
+  r._g2Projuris = r._grupo==='Grupo 2' && g2Nome ? g2Nome.nome : '';
+  r._div = !!(r._g2 && g2Nome && r._g2.nome !== g2Nome.nome);
+  if (r._g2) r._resp = r._g2.nome;
   r._cat = categoria(r.titulo);
   r._osIds = [...new Set(String(r.os_lista || r.numero_os || '').split(/[;,\s]+/).map(normOS).filter(Boolean))];
   r._osAll = r._osIds.map(i=>S.osMap.get(i)).filter(Boolean);
@@ -353,19 +379,32 @@ function prep(){
   const partes = Object.keys(TIPOS).map(t => { const c = ult(t); return `${esc(TIPOS[t].curto)}: <b>${c ? esc(fmtDT(c.criado_em)) : '—'}</b>`; });
   document.getElementById('meta').innerHTML = 'Última carga · ' + partes.join(' &nbsp;·&nbsp; ') + ` &nbsp;·&nbsp; <span style="opacity:.7">versão ${VERSAO}</span>`;
 }
-function fillSup(){
-  const m = new Map(); S.req.forEach(r => { const n = norm(r._sup); if (n && !m.has(n)) m.set(n, r._sup); });
-  const el = document.getElementById('fSup');
-  el.innerHTML = `<option value="">Todas</option>` + [...m].sort((a,b)=>a[1].localeCompare(b[1])).map(([k,v])=>`<option value="${esc(k)}">${esc(v)}</option>`).join('');
-  el.value = S.filt.sup;
+const FILTROS = ['fSup','fEsc','fTipo','fGrupo','fSit','fResp','fDe','fAte'], FKEY = {fSup:'sup', fEsc:'esc', fTipo:'tipo', fGrupo:'grupo', fSit:'sit', fResp:'resp', fDe:'de', fAte:'ate'};
+function opcoes(id, valores, rotulo='Todos'){ const el = document.getElementById(id); if (!el) return;
+  el.innerHTML = `<option value="">${rotulo}</option>` + valores.map(([k,v])=>`<option value="${esc(k)}">${esc(v)}</option>`).join(''); el.value = S.filt[FKEY[id]] || ''; }
+function fillSup(){ // preenche as listas dos filtros com o que existe na base
+  const uniq = f => { const m = new Map(); S.req.forEach(r => { const v = f(r); const n = norm(v); if (n && !m.has(n)) m.set(n, v); }); return [...m].sort((a,b)=>a[1].localeCompare(b[1])); };
+  opcoes('fSup', uniq(r=>r._sup), 'Todas'); opcoes('fEsc', uniq(r=>r._esc)); opcoes('fSit', uniq(r=>r._sit));
+  const resp = new Map(); S.req.forEach(r => { if (['Finalizada','Encerrada'].includes(r._grupo) || !r._resp || r._resp==='—') return; resp.set(r._resp, (resp.get(r._resp)||0)+1); });
+  opcoes('fResp', [...resp].sort((a,b)=>a[0].localeCompare(b[0])).map(([k,n])=>[k, `${k} (${n})`]));
 }
-function setFilt(){ S.filt = { sup:document.getElementById('fSup').value, de:document.getElementById('fDe').value, ate:document.getElementById('fAte').value }; render(); }
-function clearFilt(){ ['fSup','fDe','fAte'].forEach(i=>document.getElementById(i).value=''); setFilt(); }
+function setFilt(){ S.filt = {}; FILTROS.forEach(id => S.filt[FKEY[id]] = document.getElementById(id).value); render(); }
+function clearFilt(){ FILTROS.forEach(id => document.getElementById(id).value = ''); setFilt(); }
+const tipoReq = r => /\brio\b/.test(norm(r.tipo_requisicao)) ? 'rio' : 'dec';
 function getReqs(){
-  const {sup,de,ate} = S.filt;
-  return S.req.filter(r => (!sup || norm(r._sup)===sup) && (!de || (r.data_requisicao && r.data_requisicao>=de)) && (!ate || (r.data_requisicao && r.data_requisicao<=ate)));
+  const f = S.filt;
+  return S.req.filter(r => (!f.sup || norm(r._sup)===f.sup) && (!f.esc || norm(r._esc)===f.esc) && (!f.sit || norm(r._sit)===f.sit)
+    && (!f.tipo || tipoReq(r)===f.tipo) && (!f.resp || r._resp===f.resp)
+    && (!f.grupo || (f.grupo==='int' ? ['Grupo 1','Grupo 2'].includes(r._grupo) : r._grupo===f.grupo))
+    && (!f.de || (r.data_requisicao && r.data_requisicao>=f.de)) && (!f.ate || (r.data_requisicao && r.data_requisicao<=f.ate)));
 }
-function periodoTxt(){ const {de,ate,sup} = S.filt; let t = de||ate ? `Requisições de ${de?fmt(de):'início'} a ${ate?fmt(ate):'hoje'}` : 'Todo o período'; if (sup) t += ' · ' + (document.getElementById('fSup').selectedOptions[0]?.text||''); return t; }
+const filtrosNaoPeriodo = () => ['sup','esc','tipo','grupo','sit','resp'].some(k => S.filt[k]);
+function periodoTxt(){
+  const f = S.filt; let t = f.de||f.ate ? `Requisições de ${f.de?fmt(f.de):'início'} a ${f.ate?fmt(f.ate):'hoje'}` : 'Todo o período';
+  const txt = id => document.getElementById(id)?.selectedOptions[0]?.text || '';
+  [['sup','fSup'],['esc','fEsc'],['tipo','fTipo'],['grupo','fGrupo'],['sit','fSit'],['resp','fResp']].forEach(([k,id]) => { if (f[k]) t += ' · ' + txt(id).replace(/ \(\d+\)$/,''); });
+  return t;
+}
 
 /* ===================== Tabelas / gráficos ===================== */
 const col = (l,k,f,h) => ({l,k,f,h});
@@ -429,9 +468,17 @@ function triagem(R){
     return {...r, _sug: best.nome};
   });
 }
+const stEsc = r => { const s = norm(r.status); return s.includes('informac') ? 'Aguardando informações' : s.includes('executad') ? 'Executada' : s.includes('execucao') ? 'Aguardando execução' : (r.status || '—'); };
+const ladoGrupo = g => ['Grupo 1','Grupo 2'].includes(g) ? 'Time interno' : g === 'Escritório' ? 'Escritório' : '';
+function faseRot(r){ // fase atual, separando time interno × escritório
+  if (r._grupo === 'Escritório') return stEsc(r);
+  const s = norm(r.status), st = s.includes('aprova') ? 'Aguardando aprovação' : s.includes('informac') ? 'Aguardando informações' : s.includes('execucao') ? 'Aguardando execução' : (r.status||'—');
+  const quem = r._grupo === 'Grupo 1' && st !== 'Aguardando aprovação' ? 'Equipe (fora do G2)' : r._grupo;
+  return `${quem} · ${st}`;
+}
 function escAgg(E, keyFn){
   const t = today();
-  return [...groupBy(E, keyFn)].map(([nome, a]) => ({ nome, qtd:a.length, mais30:a.filter(r=>(r._diasAberto||0)>30).length,
+  return [...groupBy(E, keyFn)].map(([nome, a]) => ({ nome, qtd:a.length, exec:a.filter(r=>stEsc(r)==='Aguardando execução').length, info:a.filter(r=>stEsc(r)==='Aguardando informações').length, executada:a.filter(r=>stEsc(r)==='Executada').length, mais30:a.filter(r=>(r._diasAberto||0)>30).length,
     venc:a.filter(r=>r._prazoFatal && r._prazoFatal<t).length, antiga: a.map(r=>r.data_requisicao).filter(Boolean).sort()[0]||'' })).sort((a,b)=>b.qtd-a.qtd);
 }
 const revFin = v => /finaliz|reprovad|cancelad/.test(norm(v.status)) || !!v.data_finalizacao;
@@ -461,21 +508,22 @@ const COLS = {
     col('Status atual','status')],
   tri: () => [col('Nº requisição','numero_requisicao'), colD('Data da requisição','data_requisicao'), col('Dias aguardando','', r=>r.data_requisicao?daysDiff(r.data_requisicao,today()):''),
     col('Título','titulo'), col('Categoria','_cat'), col('SUP','_sup'), col('Sugestão de destinatário','_sug',null,r=>B(r._sug,'navy'))],
-  foco: () => [col('Responsável G2','', r=>r._g2?.nome||'—'), col('SUP','_sup'), col('Nº requisição','numero_requisicao'), col('Matrícula','_mat'), col('Processo','_proc'),
+  foco: () => [col('Responsável G2 (SUP)','', r=>r._g2?.nome||'—'), col('SUP','_sup'),
+    col('No Projuris em nome de','', r=>r._g2Projuris||'', r=>r._div?B(r._g2Projuris,'warn'):esc(r._g2Projuris||'')), col('Nº requisição','numero_requisicao'), col('Matrícula','_mat'), col('Processo','_proc'),
     osC('OS', o=>o.numero_os), osC('Tipo de OS', o=>o.tipo_os), osC('Abertura OS', o=>fmt(o.data_abertura)), osC('Encerramento', o=>fmt(o.data_encerramento||o.field_data)),
     osC('Dias desde o encerramento', o=>{ const d=o.data_encerramento||o.field_data; return d?daysDiff(d,today()):''; }), osC('Ocorrência SCAE', o=>o.ocorrencia),
     col('Status Field','', r=>r._os?.status_field||'', r=>r._os?.status_field?B(r._os.status_field):''),
     col('Prazo Field','', r=>prazoField(r._os), r=>{ const p=prazoField(r._os); return p?B(p,/fora/i.test(p)?'bad':'ok'):''; }),
     col('OSs executadas','', r=>`${r._osExec.length}/${r._osIds.length}`), col('Título','titulo')],
-  esc: () => [col('Nº requisição','numero_requisicao'), col('Título','titulo'), col('Status','status'), col('Advogado / responsável','_resp'), col('Escritório','_esc'), col('SUP','_sup'),
+  esc: () => [col('Nº requisição','numero_requisicao'), col('Título','titulo'), col('Status','', r=>stEsc(r), r=>B(stEsc(r), {'Aguardando execução':'mid','Aguardando informações':'warn','Executada':'ok'}[stEsc(r)]||'')), col('Advogado / responsável','_resp'), col('Escritório','_esc'), col('SUP','_sup'),
     colD('Data da requisição','data_requisicao'), col('Dias em aberto','_diasAberto'), col('Dias na fase atual','_diasFase'), col('Prazo fatal','',r=>fmt(r._prazoFatal)),
     col('Prazo fatal vencido','', r=>r._prazoFatal&&r._prazoFatal<today()?'Sim':'Não', r=>r._prazoFatal&&r._prazoFatal<today()?B('Vencido','bad'):'')],
-  agg: n => [col(n,'nome'), col('Pendentes','qtd'), col('+30 dias em aberto','mais30'), col('Prazo fatal vencido','venc', null, r=>r.venc?B(r.venc,'bad'):'0'), colD('Mais antiga','antiga')],
+  agg: n => [col(n,'nome'), col('Total','qtd'), col('Aguardando execução','exec'), col('Aguardando informações','info'), col('Executada','executada'), col('+30 dias em aberto','mais30'), col('Prazo fatal vencido','venc', null, r=>r.venc?B(r.venc,'bad'):'0'), colD('Mais antiga','antiga')],
   rev: () => [col('Nº requisição','numero_requisicao'), colD('Data da requisição','data_entrada'), col('Status','status'),
     col('Situação','', r=>revFin(r)?'Concluída':'Em aberto', r=>revFin(r)?B('Concluída','ok'):B('Em aberto','warn')), colD('Abertura OS 1','data_abertura_os1'),
     colD('Data da finalização','data_finalizacao'), col('Dias até a finalização','_diasFin'), col('Usuários responsáveis','usuarios_responsaveis'), col('Processo','processo')],
   mov: () => [colD('Data','data_evento'), col('Nº requisição','chave'), col('Status anterior','status_anterior'), col('Status novo','status_novo'),
-    col('Responsável anterior','usuario_anterior'), col('Responsável novo','usuario_novo')],
+    col('Responsável anterior','usuario_anterior'), col('Responsável novo','usuario_novo'), col('Agora com','', r=>ladoGrupo(r.grupo_novo)||r.grupo_novo||'')],
   per: () => [col('Período','label'), col('Entrantes','ent'), col('OS 1 abertas','os1')],
   mens: () => [col('Mês','mes'), col('Requisições entrantes','ent'), col('OS 1 abertas no mês','os1'), col('Entrantes já com OS 1','trat'), col('% com OS 1','pct'),
     col('Tempo médio até a OS 1 (dias)','tempo'), col('Entrantes sem OS 1','pend')]
@@ -526,35 +574,61 @@ function vFoco(){
   const R = getReqs(), G2 = R.filter(r=>r._grupo==='Grupo 2'), F = focoRows(R), O = ocorrRows(R);
   const semOS = G2.filter(r=>!r._osIds.length).length, naoLoc = G2.filter(r=>r._osIds.length && !r._osAll.length).length;
   const porResp = [...groupBy(F, r=>r._g2?.nome||'Sem responsável')].sort((a,b)=>b[1].length-a[1].length);
-  V(`${semDados()}<div class="kpis">${kpi('Pendentes Grupo 2',G2.length,'aguardando execução','navy')}${kpi('Foco do dia',F.length,'OS executada','warn')}${kpi('Encerradas sem execução',O.length,'com ocorrência','bad')}${kpi('OS em aberto',G2.length-F.length-O.length-semOS-naoLoc,'aguardar execução')}${kpi('OS fora das bases',naoLoc,'não está no SCAE/Field enviado')}${kpi('Sem OS informada',semOS,'conferir Atributos')}</div>
-  <div class="card">${cardH('Foco do dia · Grupo 2','Requisições em aguardando execução no nome do Grupo 2 cuja OS já está executada no SCAE ou finalizada no Field. Anexar o formulário de cumprimento e transferir ao escritório.')}
+  V(`${semDados()}<div class="kpis">${kpi('Pendentes Grupo 2',G2.length,'aguardando execução','navy')}${kpi('Foco do dia',F.length,'OS executada','warn')}${kpi('Encerradas sem execução',O.length,'com ocorrência','bad')}${kpi('OS em aberto',G2.length-F.length-O.length-semOS-naoLoc,'aguardar execução')}${kpi('OS fora das bases',naoLoc,'não está no SCAE/Field enviado')}${kpi('Sem OS informada',semOS,'conferir Atributos')}${kpi('Em nome de outra ponto focal',G2.filter(r=>r._div).length,'SUP de outra responsável','warn')}</div>
+  <div class="card">${cardH('Foco do dia · Grupo 2','A responsável é a ponto focal da SUP do processo (quando o Projuris está no nome de outra pessoa, a coluna “No Projuris em nome de” fica destacada). Requisições em aguardando execução no nome do Grupo 2 cuja OS já está executada no SCAE ou finalizada no Field. Anexar o formulário de cumprimento e transferir ao escritório.')}
   <div class="resp-cards">${porResp.map(([n,a])=>`<div class="rc"><div class="n">${esc(n)}</div><div class="q">${fmtI(a.length)}</div><div class="s">${esc(S.pessoas.find(p=>p.nome===n)?.superintendencias||'')}</div></div>`).join('') || '<div class="desc">Nenhuma requisição no foco agora.</div>'}</div></div>
   ${tableBlock('foco','Requisições com OS executada', COLS.foco(), F, 'Foco_do_dia_Grupo2')}
   ${tableBlock('ocor','OS encerradas sem execução', COLS.foco(), O, 'OS_encerradas_com_ocorrencia', 'OS encerrada no SCAE com ocorrência (cliente ausente, endereço não localizado…) ou encerrada no Field. Precisam de reabertura ou tratativa.')}`);
 }
 
 function vEscritorio(){
-  const E = getReqs().filter(r=>r._grupo==='Escritório'), t = today();
-  const porAdv = escAgg(E, r=>r._resp||'Sem responsável'), porEsc = escAgg(E, r=>r._esc||'Sem escritório');
-  const top = porEsc.slice(0,12);
-  V(`${semDados()}<div class="kpis">${kpi('Com escritórios',E.length,'execução, informações ou executada','navy')}${kpi('+30 dias em aberto',E.filter(r=>(r._diasAberto||0)>30).length,'','warn')}${kpi('Prazo fatal vencido',E.filter(r=>r._prazoFatal&&r._prazoFatal<t).length,'','bad')}${kpi('Escritórios',porEsc.length,'com pendência')}${kpi('Advogados',porAdv.length,'com pendência')}</div>
-  <div class="card">${cardH('Pendentes por escritório','Escritório pelo campo Advogado Interno da base de Processos.')}<div class="chart-box" style="height:${Math.max(220, top.length*34)}px"><canvas id="cEsc"></canvas></div></div>
+  const E = getReqs().filter(r=>r._grupo==='Escritório'), t = today(), ST = ['Aguardando execução','Aguardando informações','Executada'];
+  const Ef = S.escSt ? E.filter(r=>stEsc(r)===S.escSt) : E;
+  const porAdv = escAgg(Ef, r=>r._resp||'Sem responsável'), porEsc = escAgg(Ef, r=>r._esc||'Sem escritório'), graf = escAgg(E, r=>r._esc||'Sem escritório').slice(0,12);
+  const n = st => E.filter(r=>stEsc(r)===st).length;
+  const segSt = `<div class="seg">${['',...ST].map(x=>`<button class="${S.escSt===x?'on':''}" onclick="S.escSt='${x}';render()">${x||'Todos'}</button>`).join('')}</div>`;
+  V(`${semDados()}<div class="kpis">${kpi('Com escritórios',E.length,'execução, informações e executadas','navy')}${kpi('Aguardando execução',n(ST[0]),'')}${kpi('Aguardando informações',n(ST[1]),'','warn')}${kpi('Executadas',n(ST[2]),'aguardando finalização','ok')}${kpi('+30 dias em aberto',E.filter(r=>(r._diasAberto||0)>30).length,'')}${kpi('Prazo fatal vencido',E.filter(r=>r._prazoFatal&&r._prazoFatal<t).length,'','bad')}</div>
+  <div class="card">${cardH('Pendentes por escritório e status','Escritório pelo campo Advogado Interno da base de Processos.')}<div class="chart-box" style="height:${Math.max(240, graf.length*36)}px"><canvas id="cEsc"></canvas></div></div>
+  <div class="card" style="padding:14px 22px">${cardH('Status nas tabelas abaixo','', segSt)}</div>
   <div class="grid2">${tableBlock('aggE','Indicadores por escritório', COLS.agg('Escritório'), porEsc, 'Pendentes_por_escritorio')}${tableBlock('aggA','Indicadores por advogado', COLS.agg('Advogado / responsável'), porAdv, 'Pendentes_por_advogado')}</div>
-  ${tableBlock('escd','Requisições com os escritórios', COLS.esc(), E.sort((a,b)=>(b._diasAberto||0)-(a._diasAberto||0)), 'Requisicoes_escritorios')}`);
-  chart('cEsc', barCfg(top.map(x=>x.nome.length>40?x.nome.slice(0,39)+'…':x.nome), [['Pendentes',top.map(x=>x.qtd),C.navy],['Prazo fatal vencido',top.map(x=>x.venc),C.bad]], {horizontal:true}));
+  ${tableBlock('escd','Requisições com os escritórios', COLS.esc(), Ef.sort((a,b)=>(b._diasAberto||0)-(a._diasAberto||0)), 'Requisicoes_escritorios')}`);
+  chart('cEsc', barCfg(graf.map(x=>x.nome.length>40?x.nome.slice(0,39)+'…':x.nome), [['Aguardando execução',graf.map(x=>x.exec),C.mid],['Aguardando informações',graf.map(x=>x.info),C.warn],['Executada',graf.map(x=>x.executada),C.ok]], {horizontal:true, stacked:true}));
 }
 
+function duracoesHist(R){ // tempo em cada etapa pelo histórico de cargas
+  const out = {};
+  R.forEach(r => { const ev = S.histBy.get(r.chave)||[]; ev.forEach((e,i) => {
+    const g = e.grupo_novo; if (!['Grupo 1','Grupo 2','Escritório'].includes(g)) return;
+    const o = out[g] = out[g] || {fech:[], abert:[]};
+    if (ev[i+1]) { if (ev[i+1].grupo_novo !== g) o.fech.push(daysDiff(e.data_evento, ev[i+1].data_evento)); }
+    else if (r._grupo === g) o.abert.push(daysDiff(e.data_evento, today()));
+  }); });
+  const nome = {'Grupo 1':'Time interno · Grupo 1 (triagem e abertura de OS)', 'Grupo 2':'Time interno · Grupo 2 (acompanhamento da OS)', 'Escritório':'Escritório (execução e finalização)'};
+  return ['Grupo 1','Grupo 2','Escritório'].map(g => { const o = out[g] || {fech:[], abert:[]}; return {etapa:nome[g], conc:o.fech.length, medio:o.fech.length?fmtN(avg(o.fech)):'—', aberto:o.abert.length, medioAb:o.abert.length?fmtN(avg(o.abert)):'—'}; });
+}
+function fasesLado(A){
+  return [...groupBy(A, faseRot)].map(([fase,a]) => { const d = a.map(r=>r._diasFase).filter(v=>v!=null), ab = a.map(r=>r._diasAberto).filter(v=>v!=null);
+    return {fase, qtd:a.length, dfase:d.length?fmtN(avg(d)):'—', daberto:ab.length?fmtN(avg(ab)):'—', mais30:d.filter(v=>v>30).length, antiga:a.map(r=>r.data_requisicao).filter(Boolean).sort()[0]||''}; }).sort((a,b)=>b.qtd-a.qtd);
+}
 function vFases(){
   const R = getReqs(), set = new Set(R.map(r=>r.chave)), D = fasesDur(R);
-  const st = [...groupBy(R.filter(r=>!['Finalizada','Encerrada'].includes(r._grupo)), r=>r.status||'(sem status)')].map(([k,a])=>[k,a.length]).sort((a,b)=>b[1]-a[1]);
+  const TI = R.filter(r=>['Grupo 1','Grupo 2'].includes(r._grupo)), ES = R.filter(r=>r._grupo==='Escritório');
+  const fTI = fasesLado(TI), fES = fasesLado(ES);
+  const md = a => { const d = a.map(r=>r._diasFase).filter(v=>v!=null); return d.length ? fmtN(avg(d))+' d' : '—'; };
   const safra = [...groupBy(R.filter(r=>r.data_requisicao), r=>r.data_requisicao.slice(0,7))].sort((a,b)=>b[0].localeCompare(a[0])).map(([k,a]) => { const d = fasesDur(a); return {mes:glabel(k,'mes'), n:a.length, fin:a.filter(r=>r._grupo==='Finalizada').length, ap:d.ap, ex:d.ex, fi:d.fi, tot:d.tot}; });
   const mov = S.hist.filter(h=>set.has(h.chave)).sort((a,b)=>String(b.data_evento).localeCompare(String(a.data_evento)) || b.id-a.id);
-  V(`${semDados()}<div class="kpis">${kpi('Aprovação',D.ap==='—'?'—':D.ap+' d','requisição → aprovação (Grupo 1)','navy')}${kpi('Execução',D.ex==='—'?'—':D.ex+' d','aprovação → última execução')}${kpi('Finalização',D.fi==='—'?'—':D.fi+' d','execução → finalização')}${kpi('Ciclo completo',D.tot==='—'?'—':D.tot+' d','requisição → finalização','ok')}</div>
-  <div class="grid2"><div class="card">${cardH('Requisições em aberto por fase')}<div class="chart-box" style="height:${Math.max(220, st.length*36)}px"><canvas id="cFase"></canvas></div></div>
-  <div class="card">${cardH('Jornada de uma requisição','Datas do Projuris + mudanças registradas a cada carga.')}<div class="tools"><input type="text" id="qReq" placeholder="Nº da requisição" onkeydown="if(event.key==='Enter')timeline()" style="flex:1"><button class="btn sm" onclick="timeline()">Ver jornada</button></div><div id="tl"></div></div></div>
-  ${tableBlock('saf','Tempo médio por fase · por mês da requisição', [col('Mês','mes'), col('Requisições','n'), col('Finalizadas','fin'), col('Aprovação (d)','ap'), col('Execução (d)','ex'), col('Finalização (d)','fi'), col('Ciclo completo (d)','tot')], safra, 'Tempo_por_fase')}
+  const cF = [col('Fase','fase'), col('Requisições','qtd'), col('Média de dias na fase','dfase'), col('Média de dias em aberto','daberto'), col('+30 dias na fase','mais30'), colD('Mais antiga','antiga')];
+  V(`${semDados()}<div class="kpis">${kpi('Time interno',TI.length,'em aberto · média na fase '+md(TI),'navy')}${kpi('Escritório',ES.length,'em aberto · média na fase '+md(ES),'warn')}${kpi('Time interno · aprovação',D.ap==='—'?'—':D.ap+' d','requisição → aprovação')}${kpi('Execução',D.ex==='—'?'—':D.ex+' d','aprovação → última execução')}${kpi('Escritório · finalização',D.fi==='—'?'—':D.fi+' d','execução → finalização')}${kpi('Ciclo completo',D.tot==='—'?'—':D.tot+' d','requisição → finalização','ok')}</div>
+  <div class="grid2"><div class="card">${cardH('Time interno · requisições por fase','Grupo 1 (aprovação e abertura de OS) e Grupo 2 (acompanhamento da OS).')}<div class="chart-box" style="height:${Math.max(200, fTI.length*40)}px"><canvas id="cFaseTI"></canvas></div></div>
+  <div class="card">${cardH('Escritório · requisições por fase','Aguardando execução, informações e executadas (aguardando finalização).')}<div class="chart-box" style="height:${Math.max(200, fES.length*40)}px"><canvas id="cFaseES"></canvas></div></div></div>
+  <div class="grid2">${tableBlock('fti','Fases do time interno', cF, fTI, 'Fases_time_interno')}${tableBlock('fes','Fases do escritório', cF, fES, 'Fases_escritorio')}</div>
+  ${tableBlock('etp','Tempo em cada etapa (pelo histórico de cargas)', [col('Etapa','etapa'), col('Passagens concluídas','conc'), col('Média (dias)','medio'), col('Ainda na etapa','aberto'), col('Média de quem ainda está (dias)','medioAb')], duracoesHist(R), 'Tempo_por_etapa', 'Mede quantos dias cada requisição ficou com o time interno e com o escritório. Ganha precisão a cada carga diária do Projuris.')}
+  <div class="card">${cardH('Jornada de uma requisição','Datas do Projuris + mudanças registradas a cada carga.')}<div class="tools"><input type="text" id="qReq" placeholder="Nº da requisição" onkeydown="if(event.key==='Enter')timeline()" style="flex:1;max-width:320px"><button class="btn sm" onclick="timeline()">Ver jornada</button></div><div id="tl"></div></div>
+  ${tableBlock('saf','Tempo médio por fase · por mês da requisição', [col('Mês','mes'), col('Requisições','n'), col('Finalizadas','fin'), col('Time interno · aprovação (d)','ap'), col('Execução (d)','ex'), col('Escritório · finalização (d)','fi'), col('Ciclo completo (d)','tot')], safra, 'Tempo_por_fase')}
   ${tableBlock('mov','Movimentações registradas', COLS.mov(), mov, 'Movimentacoes', 'A cada carga diária, só as mudanças de status ou de responsável são gravadas.')}`);
-  chart('cFase', barCfg(st.map(x=>x[0].length>40?x[0].slice(0,39)+'…':x[0]), [['Requisições',st.map(x=>x[1]),C.mid]], {horizontal:true}));
+  const lab = a => a.map(x=>x.fase.length>42?x.fase.slice(0,41)+'…':x.fase);
+  chart('cFaseTI', barCfg(lab(fTI), [['Requisições',fTI.map(x=>x.qtd),C.navy]], {horizontal:true}));
+  chart('cFaseES', barCfg(lab(fES), [['Requisições',fES.map(x=>x.qtd),C.warn]], {horizontal:true}));
 }
 function timeline(){
   const q = normOS(document.getElementById('qReq').value) || document.getElementById('qReq').value.trim(); const el = document.getElementById('tl');
@@ -565,25 +639,27 @@ function timeline(){
   m(r.data_requisicao,'Requisição registrada',r.requisitante||''); m(r.data_abertura_os1,'OS 1 aberta',[r.numero_os, r.responsavel_abertura_os1].filter(Boolean).join(' · '));
   m(r.data_ultima_aprovacao,'Última aprovação',''); r._osAll.forEach(o=>m(o.data_encerramento||o.field_data,`OS ${o.numero_os} encerrada`,o.ocorrencia||o.status_field||''));
   m(r.data_ultima_execucao,'Última execução',''); m(r.data_finalizacao,'Finalizada','');
-  (S.histBy.get(r.chave)||[]).forEach(e=>evs.push({d:e.data_evento, t:e.status_novo||'—', s:e.usuario_novo||'', m:false}));
+  (S.histBy.get(r.chave)||[]).forEach(e=>evs.push({d:e.data_evento, t:(ladoGrupo(e.grupo_novo)?ladoGrupo(e.grupo_novo)+' · ':'')+(e.status_novo||'—'), s:e.usuario_novo||'', m:false}));
   evs.sort((a,b)=>a.d.localeCompare(b.d));
   el.innerHTML = `<p style="margin:12px 0 0"><b>${esc(r.titulo||'')}</b><br><span class="desc">Matrícula ${esc(r._mat||'—')} · ${esc(r._sup||'')} · ${esc(r._proc||'')}</span></p>
   <div class="timeline">${evs.map(e=>`<div class="ev ${e.m?'m':''}"><div class="d">${fmt(e.d)}</div><b>${esc(e.t)}</b>${e.s?`<div class="desc" style="margin:0">${esc(e.s)}</div>`:''}</div>`).join('')}</div>
-  <p class="desc">Agora: ${bG(r._grupo)} ${esc(r.status||'')} · ${esc(r._resp)} · OS: ${esc(osSit(r))}</p>`;
+  <p class="desc">Agora: ${bG(r._grupo)} ${esc(faseRot(r))} · ${esc(r._resp)} · OS: ${esc(osSit(r))}${r._div?` · no Projuris em nome de ${esc(r._g2Projuris)}`:''}</p>`;
 }
 
 function vRevogacoes(){
-  const RV = revRows(), g = S.gran.rev, s = serie(RV,'data_entrada',g);
-  const keys = [...s.keys()].filter(k=>k<=gk(today(),g)).sort().slice(-LIM[g]); const mesAtual = today().slice(0,7);
-  const per = keys.map(k=>({label:glabel(k,g), qtd:s.get(k)})).reverse();
+  const RV = revRows(), g = S.gran.rev, s = serie(RV,'data_entrada',g), f = S.filt;
+  const FN = S.rev.filter(v => v.data_finalizacao && (!f.de || v.data_finalizacao>=f.de) && (!f.ate || v.data_finalizacao<=f.ate)), sf = serie(FN,'data_finalizacao',g);
+  const keys = [...new Set([...s.keys(), ...sf.keys()])].filter(k=>k<=gk(today(),g)).sort().slice(-LIM[g]); const mesAtual = today().slice(0,7), rotMes = MESES[+mesAtual.slice(5)-1]+'/'+mesAtual.slice(2,4);
+  const per = keys.map(k=>({label:glabel(k,g), qtd:s.get(k)||0, fin:sf.get(k)||0})).reverse();
   const porSt = [...groupBy(RV, v=>v.status||'(sem status)')].map(([k,a])=>({status:k, qtd:a.length})).sort((a,b)=>b.qtd-a.qtd);
-  const dias = RV.map(v=>v._diasFin).filter(v=>v!=null && v>=0);
-  V(`${!S.rev.length?`<div class="note">A base de Revogações ainda não foi carregada. Envie a planilha em <b>Carregar bases</b>.</div>`:''}
-  <div class="kpis">${kpi('Revogações',RV.length,periodoTxt(),'navy')}${kpi('Em aberto',RV.filter(v=>!revFin(v)).length,'','warn')}${kpi('Aguardando aprovação',RV.filter(v=>/aprova/.test(norm(v.status))).length,'')}${kpi('Finalizadas',RV.filter(v=>/finaliz/.test(norm(v.status))).length,'','ok')}${kpi('Entrantes no mês',RV.filter(v=>(v.data_entrada||'').startsWith(mesAtual)).length,MESES[+mesAtual.slice(5)-1]+'/'+mesAtual.slice(2,4))}${kpi('Tempo médio',dias.length?fmtN(avg(dias))+' d':'—','requisição → finalização')}</div>
-  <div class="card">${cardH('Revogações entrantes','Pela data da requisição.', seg('rev'))}<div class="chart-box"><canvas id="cRev"></canvas></div></div>
-  <div class="grid2">${tableBlock('revp','Entrantes por '+{dia:'dia',semana:'semana',mes:'mês'}[g], [col('Período','label'), col('Entrantes','qtd')], per, 'Revogacoes_por_periodo')}${tableBlock('revs','Status atual', [col('Status','status'), col('Requisições','qtd')], porSt, 'Revogacoes_por_status')}</div>
+  const finMes = S.rev.filter(v=>(v.data_finalizacao||'').startsWith(mesAtual)), dias = RV.map(v=>v._diasFin).filter(v=>v!=null && v>=0);
+  V(`${!S.rev.length?`<div class="note">A base de Revogações ainda não foi carregada. Envie a planilha em <b>Carregar bases</b>.</div>`:''}${filtrosNaoPeriodo()?`<div class="note">A base de Revogações não tem SUP, escritório nem responsável: aqui só o filtro de período é aplicado.</div>`:''}
+  <div class="kpis">${kpi('Revogações',RV.length,periodoTxt(),'navy')}${kpi('Em aberto',RV.filter(v=>!revFin(v)).length,'','warn')}${kpi('Aguardando aprovação',RV.filter(v=>/aprova/.test(norm(v.status))).length,'')}${kpi('Finalizadas no mês',finMes.length,'finalizadas em '+rotMes,'ok')}${kpi('Entrantes no mês',RV.filter(v=>(v.data_entrada||'').startsWith(mesAtual)).length,rotMes)}${kpi('Finalizadas (total)',RV.filter(v=>/finaliz/.test(norm(v.status))).length,'')}${kpi('Tempo médio',dias.length?fmtN(avg(dias))+' d':'—','requisição → finalização')}</div>
+  <div class="card">${cardH('Revogações entrantes × finalizadas','Entrantes pela data da requisição; finalizadas pela data da finalização.', seg('rev'))}<div class="chart-box"><canvas id="cRev"></canvas></div></div>
+  <div class="grid2">${tableBlock('revp','Entrantes e finalizadas por '+{dia:'dia',semana:'semana',mes:'mês'}[g], [col('Período','label'), col('Entrantes','qtd'), col('Finalizadas','fin')], per, 'Revogacoes_por_periodo')}${tableBlock('revs','Status atual', [col('Status','status'), col('Requisições','qtd')], porSt, 'Revogacoes_por_status')}</div>
+  ${tableBlock('revf','Finalizadas no mês ('+rotMes+')', COLS.rev(), finMes.sort((a,b)=>String(b.data_finalizacao).localeCompare(String(a.data_finalizacao))), 'Revogacoes_finalizadas_no_mes')}
   ${tableBlock('rev','Revogações', COLS.rev(), RV.sort((a,b)=>String(b.data_entrada||'').localeCompare(String(a.data_entrada||''))), 'Revogacoes')}`);
-  chart('cRev', barCfg(keys.map(k=>glabel(k,g)), [['Entrantes',keys.map(k=>s.get(k)),C.navy]], {type:g==='dia'?'line':'bar'}));
+  chart('cRev', barCfg(keys.map(k=>glabel(k,g)), [['Entrantes',keys.map(k=>s.get(k)||0),C.navy],['Finalizadas',keys.map(k=>sf.get(k)||0),C.ok]], {type:g==='dia'?'line':'bar'}));
 }
 
 function vBase(){
@@ -1216,8 +1292,63 @@ document.addEventListener('keydown', e => {
 document.getElementById('modalBg').addEventListener('click', e => { if (e.target.id==='modalBg') closeModal(); });
 document.querySelectorAll('[data-i]').forEach(el => el.outerHTML = ic(el.dataset.i, 15));
 
-buildNav();
-load();
+/* ===================== Login (Supabase Auth) ===================== */
+const LOGO = `<div class="eyebrow"><span class="dot"></span>ÁGUAS DO RIO · JURÍDICO</div>`;
+function telaLogin(msg='', erro=false){
+  document.body.classList.add('bloq');
+  document.getElementById('lcard').innerHTML = `${LOGO}<h1>Cumprimento de Obrigações</h1><div class="desc">Entre com seu e-mail e senha.</div>
+  <form onsubmit="entrar(event)"><label>E-mail</label><input type="email" id="lEmail" autocomplete="username" required>
+  <label>Senha</label><input type="password" id="lSenha" autocomplete="current-password" required>
+  <button class="btn" id="lBtn">Entrar</button></form>
+  <button class="link" onclick="esqueci()">Esqueci minha senha</button>
+  <div class="lmsg ${erro?'err':''}" id="lMsg">${esc(msg)}</div>`;
+  setTimeout(()=>document.getElementById('lEmail')?.focus(), 50);
+}
+function lmsg(t, erro=false){ const m = document.getElementById('lMsg'); if (m) { m.textContent = t; m.className = 'lmsg' + (erro?' err':''); } }
+async function entrar(ev){
+  ev.preventDefault(); const b = document.getElementById('lBtn'); b.disabled = true; b.textContent = 'Entrando…'; lmsg('');
+  const { data, error } = await sb.auth.signInWithPassword({ email:document.getElementById('lEmail').value.trim(), password:document.getElementById('lSenha').value });
+  if (error) { b.disabled = false; b.textContent = 'Entrar'; return lmsg(/invalid/i.test(error.message) ? 'E-mail ou senha incorretos.' : 'Não foi possível entrar: ' + error.message, true); }
+  await liberar(data.session);
+}
+async function esqueci(){
+  const email = document.getElementById('lEmail')?.value.trim();
+  if (!email) return lmsg('Digite seu e-mail acima e clique de novo em "Esqueci minha senha".', true);
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  lmsg(error ? 'Não foi possível enviar: ' + error.message : 'Se o e-mail estiver cadastrado, você vai receber um link para criar uma nova senha.', !!error);
+}
+function telaNovaSenha(){
+  document.body.classList.add('bloq');
+  document.getElementById('lcard').innerHTML = `${LOGO}<h1>Nova senha</h1><div class="desc">Escolha uma senha com pelo menos 8 caracteres.</div>
+  <form onsubmit="salvarSenha(event)"><label>Nova senha</label><input type="password" id="nS1" autocomplete="new-password" minlength="8" required>
+  <label>Repita a senha</label><input type="password" id="nS2" autocomplete="new-password" minlength="8" required><button class="btn" id="nBtn">Salvar senha</button></form><div class="lmsg" id="lMsg"></div>`;
+}
+async function salvarSenha(ev){
+  ev.preventDefault(); const a = document.getElementById('nS1').value, b = document.getElementById('nS2').value;
+  if (a !== b) return lmsg('As senhas não são iguais.', true);
+  const { error } = await sb.auth.updateUser({ password:a });
+  if (error) return lmsg('Não foi possível salvar: ' + error.message, true);
+  history.replaceState(null, '', location.pathname);
+  const { data } = await sb.auth.getSession(); await liberar(data.session);
+}
+async function liberar(session){
+  if (!session) return telaLogin();
+  const { data:ok, error } = await sb.rpc('cob_autorizado');
+  if (error || !ok) { await sb.auth.signOut(); return telaLogin(error ? 'Erro ao verificar acesso: ' + error.message : 'Seu e-mail não está liberado para esta plataforma. Peça a liberação à responsável.', true); }
+  S.user = session.user;
+  document.getElementById('user').innerHTML = `${esc(session.user.email)} <button class="btn sm light" onclick="sair()">Sair</button>`;
+  document.body.classList.remove('bloq');
+  if (!S.carregou) { S.carregou = true; buildNav(); await load(); }
+}
+async function sair(){ await sb.auth.signOut(); location.reload(); }
+(async () => {
+  if (!sb) { telaLogin('Não foi possível conectar ao Supabase. Recarregue a página.', true); return; }
+  if (/type=recovery/.test(location.hash)) S.recuperando = true;
+  sb.auth.onAuthStateChange((ev) => { if (ev === 'PASSWORD_RECOVERY') { S.recuperando = true; setTimeout(telaNovaSenha, 0); } });
+  const { data } = await sb.auth.getSession();
+  if (S.recuperando) return telaNovaSenha();
+  if (data.session) await liberar(data.session); else telaLogin();
+})();
 </script>
 </body>
 </html>
