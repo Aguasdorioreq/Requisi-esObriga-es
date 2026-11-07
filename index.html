@@ -140,6 +140,7 @@ tr:hover td{background:#f6fafe}
 
 <script>
 /* ===================== Conexão ===================== */
+const VERSAO = '2026.11.06-c';
 const SB_URL = 'https://ouhaiffxwxucmesprbjr.supabase.co';
 const SB_KEY = 'sb_publishable_pD8U39Nl4xhC-95t-1FQvw_giOSi7le';
 let sb = null;
@@ -349,7 +350,7 @@ function prep(){
   S.rev.forEach(v => { v._fin = v.data_finalizacao; v._diasFin = v.data_entrada && v.data_finalizacao ? daysDiff(v.data_entrada, v.data_finalizacao) : null; });
   const ult = t => S.cargas.find(c=>c.tipo===t);
   const partes = Object.keys(TIPOS).map(t => { const c = ult(t); return `${esc(TIPOS[t].curto)}: <b>${c ? esc(fmtDT(c.criado_em)) : '—'}</b>`; });
-  document.getElementById('meta').innerHTML = 'Última carga · ' + partes.join(' &nbsp;·&nbsp; ');
+  document.getElementById('meta').innerHTML = 'Última carga · ' + partes.join(' &nbsp;·&nbsp; ') + ` &nbsp;·&nbsp; <span style="opacity:.7">versão ${VERSAO}</span>`;
 }
 function fillSup(){
   const m = new Map(); S.req.forEach(r => { const n = norm(r._sup); if (n && !m.has(n)) m.set(n, r._sup); });
@@ -393,9 +394,8 @@ function xlsxDownload(sheets, file){
   sheets.forEach(s => { const ws = XLSX.utils.json_to_sheet(s.rows.length ? s.rows : [{'Sem registros':''}]); XLSX.utils.book_append_sheet(wb, ws, s.name.replace(/[\\\/?*\[\]:]/g,' ').slice(0,31)); });
   XLSX.writeFile(wb, `${file}_${today()}.xlsx`.replace(/\s+/g,'_'));
 }
-function chart(id, cfg){ if (S.charts[id]) S.charts[id].destroy(); const el = document.getElementById(id); if (el) S.charts[id] = new Chart(el, cfg); }
-Chart.defaults.font.family = 'Manrope, system-ui, sans-serif';
-Chart.defaults.color = '#647b97';
+function chart(id, cfg){ if (!window.Chart) return; if (S.charts[id]) S.charts[id].destroy(); const el = document.getElementById(id); if (el) S.charts[id] = new Chart(el, cfg); }
+if (window.Chart) { Chart.defaults.font.family = 'Manrope, system-ui, sans-serif'; Chart.defaults.color = '#647b97'; }
 function barCfg(labels, series, opts={}){
   return { type: opts.type||'bar', data:{ labels, datasets: series.map(([label,data,color]) => ({label, data, backgroundColor:color, borderColor:color, borderRadius:6, tension:.3, fill:false, pointRadius:3})) },
     options:{ maintainAspectRatio:false, indexAxis:opts.horizontal?'y':'x', plugins:{ legend:{display:series.length>1, position:'bottom', labels:{boxWidth:12, boxHeight:12, usePointStyle:true}} },
@@ -406,7 +406,7 @@ const seg = key => `<div class="seg">${['dia','semana','mes'].map(x=>`<button cl
 /* ===================== Cálculos ===================== */
 function mensal(R){
   const ks = new Set(); R.forEach(r => { if (r.data_requisicao) ks.add(r.data_requisicao.slice(0,7)); if (r.data_abertura_os1) ks.add(r.data_abertura_os1.slice(0,7)); });
-  const keys = [...ks].sort();
+  const lim = today().slice(0,7), keys = [...ks].filter(k=>k<=lim).sort();
   const ent = serie(R,'data_requisicao','mes'), os1 = serie(R,'data_abertura_os1','mes');
   const safra = groupBy(R.filter(r=>r.data_requisicao), r=>r.data_requisicao.slice(0,7));
   return { keys, labels: keys.map(k=>glabel(k,'mes')), ent: keys.map(k=>ent.get(k)||0), os1: keys.map(k=>os1.get(k)||0),
@@ -511,7 +511,7 @@ function vPainel(){
 function vTratamento(){
   const R = getReqs(), g = S.gran.ent;
   const ent = serie(R,'data_requisicao',g), os1 = serie(R,'data_abertura_os1',g);
-  const keys = [...new Set([...ent.keys(), ...os1.keys()])].sort().slice(-LIM[g]);
+  const keys = [...new Set([...ent.keys(), ...os1.keys()])].filter(k=>k<=gk(today(),g)).sort().slice(-LIM[g]);
   const per = keys.map(k=>({label:glabel(k,g), ent:ent.get(k)||0, os1:os1.get(k)||0})).reverse();
   const det = R.filter(r=>r.data_requisicao).sort((a,b)=>b.data_requisicao.localeCompare(a.data_requisicao));
   V(`${semDados()}<div class="card">${cardH('Requisições entrantes × OS 1 abertas pelo Grupo 1','Data da requisição × data da abertura da OS 1.', seg('ent'))}<div class="chart-box"><canvas id="cEnt"></canvas></div></div>
@@ -573,7 +573,7 @@ function timeline(){
 
 function vRevogacoes(){
   const RV = revRows(), g = S.gran.rev, s = serie(RV,'data_entrada',g);
-  const keys = [...s.keys()].sort().slice(-LIM[g]); const mesAtual = today().slice(0,7);
+  const keys = [...s.keys()].filter(k=>k<=gk(today(),g)).sort().slice(-LIM[g]); const mesAtual = today().slice(0,7);
   const per = keys.map(k=>({label:glabel(k,g), qtd:s.get(k)})).reverse();
   const porSt = [...groupBy(RV, v=>v.status||'(sem status)')].map(([k,a])=>({status:k, qtd:a.length})).sort((a,b)=>b.qtd-a.qtd);
   const dias = RV.map(v=>v._diasFin).filter(v=>v!=null && v>=0);
@@ -700,22 +700,38 @@ const KEYS = {
 const DATES = new Set(['data_requisicao','data_ultima_aprovacao','data_abertura_os1','prazo_os','prazo_fatal','prazo_fatal_processo','data_ultima_execucao','data_finalizacao',
   'historico_atual','data_abertura','data_encerramento','field_data','field_inicio_sla','field_fim_sla','data_entrada']);
 
-async function readSheet(file){
+function fixRef(ws){
+  // algumas exportações declaram ~1 milhão de linhas vazias; recalcula a área usada pelas células reais
+  let mr = -1, mc = -1;
+  for (const k in ws) { if (k[0]==='!') continue; const c = XLSX.utils.decode_cell(k); if (c.r > mr) mr = c.r; if (c.c > mc) mc = c.c; }
+  if (mr < 0) return false;
+  ws['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:mr,c:mc}});
+  return true;
+}
+function parseWs(ws, fields){
+  if (!fixRef(ws)) return null;
+  const a = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:'', blankrows:false});
+  let hi = a.findIndex(r => r.filter(c=>String(c).trim()!=='').length >= 3); if (hi < 0) hi = 0;
+  const seen = {};
+  const headers = (a[hi]||[]).map((h,i) => { let x = String(h).trim() || `Coluna ${i+1}`; if (seen[x]) x += ` (${++seen[x]})`; else seen[x] = 1; return x; });
+  const rows = a.slice(hi+1).filter(r=>r.some(c=>String(c).trim()!=='')).map(r => { const o = {}; headers.forEach((h,i)=>o[h]=r[i]); return o; });
+  return {headers, rows, score: fields ? Object.keys(detect(headers, fields)).length : 0};
+}
+async function readSheet(file, fields){
   const buf = new Uint8Array(await file.arrayBuffer());
   const binario = (buf[0]===0x50 && buf[1]===0x4B) || (buf[0]===0xD0 && buf[1]===0xCF);
   let wb;
   if (binario) wb = XLSX.read(buf, {type:'array'});
   else {
     let txt; try { txt = new TextDecoder('utf-8', {fatal:true}).decode(buf); } catch (e) { txt = new TextDecoder('windows-1252').decode(buf); }
-    wb = XLSX.read(txt.replace(/^﻿/,''), {type:'string', raw:true});
+    wb = XLSX.read(txt.replace(/^\uFEFF/,''), {type:'string', raw:true});
   }
-  let best = [];
-  wb.SheetNames.forEach(n => { const a = XLSX.utils.sheet_to_json(wb.Sheets[n], {header:1, raw:true, defval:''}); if (a.length > best.length) best = a; });
-  let hi = best.findIndex(r => r.filter(c=>String(c).trim()!=='').length >= 3); if (hi < 0) hi = 0;
-  const seen = {};
-  const headers = (best[hi]||[]).map((h,i) => { let x = String(h).trim() || `Coluna ${i+1}`; if (seen[x]) x += ` (${++seen[x]})`; else seen[x] = 1; return x; });
-  const rows = best.slice(hi+1).filter(r=>r.some(c=>String(c).trim()!=='')).map(r => { const o = {}; headers.forEach((h,i)=>o[h]=r[i]); return o; });
-  return {headers, rows};
+  // lê todas as abas e escolhe a que tem mais colunas reconhecidas (desempate: mais linhas)
+  const sheets = [];
+  wb.SheetNames.forEach(n => { const d = parseWs(wb.Sheets[n], fields); if (d) sheets.push({name:n, ...d}); });
+  if (!sheets.length) return {headers:[], rows:[], sheets:[], sheet:''};
+  const best = sheets.reduce((a,b) => (b.score > a.score || (b.score===a.score && b.rows.length > a.rows.length)) ? b : a);
+  return {headers:best.headers, rows:best.rows, sheets, sheet:best.name};
 }
 function detect(headers, fields){
   const nh = headers.map(h=>norm(h)), used = new Set(), map = {};
@@ -729,16 +745,19 @@ function detect(headers, fields){
 async function onFile(tipo, input){
   const file = input.files[0]; if (!file) return;
   toast('Lendo planilha… (bases grandes podem levar alguns segundos)', false, true);
-  try { await new Promise(r=>setTimeout(r,30)); const {headers, rows} = await readSheet(file); hideToast(); openMapping(tipo, file.name, headers, rows); }
+  try { await new Promise(r=>setTimeout(r,30)); const r = await readSheet(file, TIPOS[tipo].fields); hideToast(); S.sheets = r.sheets; openMapping(tipo, file.name, r.headers, r.rows, r.sheet); }
   catch (e) { console.error(e); toast('Erro ao ler o arquivo: '+e.message, true); }
   input.value = '';
 }
-function openMapping(tipo, fname, headers, rows){
+function trocarAba(nome){ const P = S.pending, sh = (S.sheets||[]).find(x=>x.name===nome); if (!P || !sh) return; openMapping(P.tipo, P.fname, sh.headers, sh.rows, sh.name); }
+function openMapping(tipo, fname, headers, rows, aba=''){
   const T = TIPOS[tipo], saved = S.config['map_'+tipo] || {}, auto = detect(headers, T.fields), map = {};
+  // vínculo salvo só vale se a coluna existir nesta planilha; senão usa a detecção automática
   T.fields.forEach(([k]) => map[k] = saved[k] && headers.includes(saved[k]) ? saved[k] : (auto[k]||''));
   S.pending = {tipo, fname, headers, rows, map};
+  const abas = (S.sheets||[]).length > 1 ? `<div style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap"><label class="desc" style="margin:0;font-weight:700">Aba da planilha</label><select onchange="trocarAba(this.value)">${S.sheets.map(x=>`<option value="${esc(x.name)}" ${x.name===aba?'selected':''}>${esc(x.name)} · ${fmtI(x.rows.length)} linhas · ${x.score} colunas reconhecidas</option>`).join('')}</select></div>` : '';
   const extra = tipo==='scae' ? `<label style="display:flex;gap:8px;align-items:center;margin:4px 0 12px;font-size:13px"><input type="checkbox" id="mpTeam" checked onchange="mapPreview()"> Importar apenas OSs abertas pelo time (pessoas ativas em Equipe & regras)</label>` : '';
-  modal(`<h3 style="margin:0 0 4px">Conferir colunas · ${esc(T.t)}</h3><div class="desc">${esc(fname)} · ${fmtI(rows.length)} linhas. Confira o vínculo de cada informação — ele fica salvo para as próximas cargas.</div>
+  modal(`<h3 style="margin:0 0 4px">Conferir colunas · ${esc(T.t)}</h3><div class="desc">${esc(fname)}${aba?` · aba “${esc(aba)}”`:''} · ${fmtI(rows.length)} linhas · ${headers.length} colunas na planilha. Confira o vínculo de cada informação — ele fica salvo para as próximas cargas.</div>${abas}
   <div class="map-grid">${T.fields.map(([k,l])=>`<div><label>${esc(l)}${T.req.includes(k)?' *':''}</label><select data-k="${k}" onchange="S.pending.map[this.dataset.k]=this.value;mapPreview()"><option value="">— não usar —</option>${headers.map(h=>`<option value="${esc(h)}">${esc(h)}</option>`).join('')}</select></div>`).join('')}</div>
   ${extra}<div class="note" id="mpPrev"></div>
   <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn light" onclick="closeModal()">Cancelar</button><button class="btn" id="mpOk" onclick="confirmMapping()">Importar</button></div>`);
@@ -930,7 +949,7 @@ function pshow(){
   const sl = [...document.querySelectorAll('#pres .slide')];
   sl.forEach((s,i) => s.classList.toggle('on', i===S.pi));
   document.getElementById('pnum').textContent = `${S.pi+1}/${sl.length}`;
-  sl[S.pi].querySelectorAll('canvas').forEach(cv => { if (!S.pch[cv.id]) S.pch[cv.id] = new Chart(cv, S.pcfg[cv.id]); });
+  if (window.Chart) sl[S.pi].querySelectorAll('canvas').forEach(cv => { if (!S.pch[cv.id]) S.pch[cv.id] = new Chart(cv, S.pcfg[cv.id]); });
 }
 function pmove(d){ const n = document.querySelectorAll('#pres .slide').length; S.pi = Math.min(n-1, Math.max(0, S.pi+d)); pshow(); }
 function fecharPres(){
