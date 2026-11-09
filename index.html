@@ -11,6 +11,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
+/* cores semânticas também em azul; o vermelho fica só para erros do sistema e a ação de apagar */
 :root{
   --navy:#0b2545;--navy2:#13315c;--blue:#1d4e89;--mid:#3a6ea5;--sky:#7fb8e6;--pastel:#a9d3f2;--baby:#cfe6f7;--baby2:#eaf5fd;
   --bg:#f3f8fc;--card:#fff;--line:#e3edf6;--text:#0b2545;--muted:#647b97;--ok:#2f8f5b;--warn:#b97800;--bad:#c0392b;
@@ -52,7 +53,7 @@ body{margin:0;font-family:Manrope,system-ui,sans-serif;background:var(--bg);colo
 .kpi .s{font-size:12px;color:var(--muted);margin-top:2px}
 .kpi.navy{background:var(--navy);border-color:var(--navy);color:#fff}
 .kpi.navy .l,.kpi.navy .s{color:var(--pastel)}
-.kpi.warn .v{color:var(--warn)}.kpi.bad .v{color:var(--bad)}.kpi.ok .v{color:var(--ok)}
+.kpi.warn .v{color:var(--mid)}.kpi.bad .v{color:var(--blue)}.kpi.ok .v{color:#4f86c0}
 select,input[type=date],input[type=text],input.search{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:9px;padding:7px 10px;background:#fff;color:var(--text)}
 .hero select,.hero input{border-color:rgba(11,37,69,.14)}
 .btn{display:inline-flex;align-items:center;gap:7px;background:var(--navy);color:#fff;border:0;border-radius:10px;padding:9px 15px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
@@ -73,7 +74,7 @@ tr:hover td{background:#f6fafe}
 .empty{text-align:center;color:#8a9bb2;padding:34px 10px}
 .more{font-size:12px;color:var(--muted);padding:10px}
 .b{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:700;background:var(--baby);color:var(--navy)}
-.b.ok{background:#e1f3e9;color:var(--ok)}.b.warn{background:#fdf1d7;color:var(--warn)}.b.bad{background:#fbe3e0;color:var(--bad)}.b.navy{background:var(--navy);color:#fff}.b.mid{background:#d9e8f6;color:var(--blue)}.b.gray{background:#eef1f5;color:#61708a}
+.b.ok{background:#e6f2fc;color:var(--blue)}.b.warn{background:#d4e6f7;color:var(--navy2)}.b.bad{background:var(--blue);color:#fff}.b.navy{background:var(--navy);color:#fff}.b.mid{background:#d9e8f6;color:var(--blue)}.b.gray{background:#eef1f5;color:#61708a}
 .seg{display:inline-flex;background:var(--baby2);border-radius:10px;padding:3px}
 .seg button{border:0;background:none;padding:6px 12px;border-radius:8px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;color:var(--navy)}
 .seg button.on{background:var(--navy);color:#fff}
@@ -161,7 +162,7 @@ body.bloq #login{display:flex}
 
 <script>
 /* ===================== Conexão ===================== */
-const VERSAO = '2026.11.08-c';
+const VERSAO = '2026.11.08-d';
 const SB_URL = 'https://ouhaiffxwxucmesprbjr.supabase.co';
 const SB_KEY = 'sb_publishable_pD8U39Nl4xhC-95t-1FQvw_giOSi7le';
 let sb = null;
@@ -170,7 +171,8 @@ try { sb = supabase.createClient(SB_URL, SB_KEY); } catch (e) { console.error(e)
 const S = { req:[], proc:[], os:[], hist:[], rev:[], pessoas:[], cargas:[], config:{}, osMap:new Map(), procMap:new Map(),
   histBy:new Map(), reqMap:new Map(), mcache:new Map(), tables:{}, charts:{}, pch:{}, pcfg:{}, gran:{ent:'mes', rev:'mes'},
   filt:{}, escSt:'', baseGrupo:'', pending:null, pi:0, snaps:[], blobs:[], modelo:null };
-const C = { navy:'#0b2545', blue:'#1d4e89', mid:'#3a6ea5', sky:'#7fb8e6', pastel:'#a9d3f2', baby:'#cfe6f7', warn:'#e0a526', bad:'#c0392b', ok:'#2f8f5b', gray:'#c9d3df' };
+// paleta única dos gráficos: tons de azul (marinho → azul bebê). warn/bad/ok/gray também são azuis, para nenhum gráfico sair colorido
+const C = { navy:'#0b2545', blue:'#1d4e89', mid:'#3a6ea5', sky:'#7fb8e6', pastel:'#a9d3f2', baby:'#cfe6f7', warn:'#7fb8e6', bad:'#1d4e89', ok:'#a9d3f2', gray:'#cfe6f7' };
 const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 const LIM = { dia:60, semana:26, mes:36 };
 const PK = { cob_pessoas:'id', cob_requisicoes:'chave', cob_processos:'chave', cob_historico:'id', cob_os:'os_id', cob_revogacoes:'chave', cob_cargas:'id', cob_config:'chave', cob_snapshots:'data' };
@@ -453,7 +455,7 @@ if (window.Chart) { Chart.defaults.font.family = 'Manrope, system-ui, sans-serif
 function barCfg(labels, series, opts={}){
   return { type: opts.type||'bar', data:{ labels, datasets: series.map(([label,data,color]) => ({label, data, backgroundColor:color, borderColor:color, borderRadius:6, tension:.3, fill:false, pointRadius:3})) },
     options:{ maintainAspectRatio:false, indexAxis:opts.horizontal?'y':'x', plugins:{ legend:{display:series.length>1, position:'bottom', labels:{boxWidth:12, boxHeight:12, usePointStyle:true}} },
-      scales:{ x:{grid:{display:!!opts.horizontal, color:'#eef3f9'}, stacked:!!opts.stacked}, y:{beginAtZero:true, grid:{display:!opts.horizontal, color:'#eef3f9'}, stacked:!!opts.stacked} } } };
+      scales:{ x:{grid:{display:!!opts.horizontal, color:'#eef3f9'}, stacked:!!opts.stacked}, y:{beginAtZero:true, grid:{display:!opts.horizontal, color:'#eef3f9'}, stacked:!!opts.stacked, ticks:{autoSkip:!opts.horizontal}} } } };
 }
 const seg = key => `<div class="seg">${['dia','semana','mes'].map(x=>`<button class="${S.gran[key]===x?'on':''}" onclick="S.gran.${key}='${x}';render()">${{dia:'Dia',semana:'Semana',mes:'Mês'}[x]}</button>`).join('')}</div>`;
 
@@ -570,11 +572,16 @@ function vPainel(){
   const M = mensal(R), s = Math.max(0, M.keys.length-12);
   chart('cMens', barCfg(M.labels.slice(s), [['Entrantes',M.ent.slice(s),C.navy],['OS 1 abertas',M.os1.slice(s),C.pastel]]));
   const gs = ['Grupo 1','Grupo 2','Escritório','Em requisição','Outros'];
-  chart('cGrp', {type:'doughnut', data:{labels:gs, datasets:[{data:gs.map(by), backgroundColor:[C.navy,C.mid,C.warn,C.pastel,C.gray], borderWidth:2, borderColor:'#fff'}]}, options:{maintainAspectRatio:false, cutout:'62%', plugins:{legend:{position:'right', labels:{usePointStyle:true}}}}});
+  chart('cGrp', {type:'doughnut', data:{labels:gs, datasets:[{data:gs.map(by), backgroundColor:blues(5), borderWidth:2, borderColor:'#fff'}]}, options:{maintainAspectRatio:false, cutout:'62%', plugins:{legend:{position:'right', labels:{usePointStyle:true}}}}});
 }
 
 /* ---------- Grupo 1: produção por membro, valores, liminar, roteiro de escape ---------- */
-const PAL = [C.navy, C.blue, C.mid, C.sky, C.pastel, C.warn, C.ok, C.bad, C.gray];
+// n tons de azul da paleta (marinho → azul → azul médio → azul claro → azul bebê), sem passar por tons acinzentados
+const AZUIS = ['#0b2545','#1d4e89','#3a6ea5','#7fb8e6','#a9d3f2','#cfe6f7'];
+const blues = n => { const hx = h => [1,3,5].map(i=>parseInt(h.substr(i,2),16));
+  if (n <= AZUIS.length) { const idx = n===1 ? [0] : n===2 ? [0,4] : n===3 ? [0,3,4] : n===4 ? [0,2,3,4] : n===5 ? [0,1,2,3,4] : [0,1,2,3,4,5]; return idx.map(i=>AZUIS[i]); }
+  return Array.from({length:n}, (_,i) => { const t = i/(n-1)*(AZUIS.length-1), k = Math.min(AZUIS.length-2, Math.floor(t)), f = t-k, a = hx(AZUIS[k]), b = hx(AZUIS[k+1]);
+    return '#'+a.map((v,j)=>Math.round(v+(b[j]-v)*f).toString(16).padStart(2,'0')).join(''); }); };
 const segN = (key, opts) => `<div class="seg">${opts.map(([x,l])=>`<button class="${(S.gran[key]||opts[0][0])===x?'on':''}" onclick="S.gran.${key}='${x}';render()">${l}</button>`).join('')}</div>`;
 const gkv = (d,g) => g==='ano' ? String(d).slice(0,4) : gk(d,g);
 const glv = (k,g) => g==='ano' ? k : glabel(k,g);
@@ -644,13 +651,13 @@ function vTratamento(){
   chart('cEnt', barCfg(keys.map(k=>glabel(k,g)), [['Entrantes',keys.map(k=>ent.get(k)||0),C.navy],['OS 1 abertas',keys.map(k=>os1.get(k)||0),C.pastel]], {type: g==='dia'?'line':'bar'}));
   const pk = [...new Set(D.A.map(x=>gk(x.d,g1)))].filter(k=>k<=gk(today(),g1)).sort().slice(-LIM[g1]), membros = D.pm.filter(m=>m.tot).map(m=>m.nome);
   const cnt = n => { const m = new Map(); (D.por.get(n)||[]).forEach(x => { const k = gk(x.d,g1); m.set(k,(m.get(k)||0)+1); }); return m; };
-  chart('cG1', barCfg(pk.map(k=>glabel(k,g1)), membros.map((n,i)=>{ const m = cnt(n); return [n, pk.map(k=>m.get(k)||0), PAL[i%PAL.length]]; }), {stacked:true}));
+  chart('cG1', barCfg(pk.map(k=>glabel(k,g1)), membros.map((n,i)=>{ const m = cnt(n); return [n, pk.map(k=>m.get(k)||0), blues(membros.length)[i]]; }), {stacked:true}));
   const tp = [...groupBy(D.A, x=>x.tipo)].map(([k,a])=>[k,a.length]).sort((a,b)=>b[1]-a[1]).slice(0,10);
   chart('cG1T', barCfg(tp.map(x=>x[0].length>38?x[0].slice(0,37)+'…':x[0]), [['OS',tp.map(x=>x[1]),C.mid]], {horizontal:true}));
   chart('cVal', {type:'bar', data:{labels:vp.map(x=>x.label), datasets:[
     {type:'bar', label:'Requisições', data:vp.map(x=>x.ent), backgroundColor:C.navy, borderRadius:6, yAxisID:'y'},
     {type:'bar', label:'OS 1 abertas', data:vp.map(x=>x.os1), backgroundColor:C.pastel, borderRadius:6, yAxisID:'y'},
-    {type:'line', label:'Tempo médio de retorno (dias)', data:vp.map(x=>x.tempo), borderColor:C.warn, backgroundColor:C.warn, tension:.3, spanGaps:true, yAxisID:'y1'}]},
+    {type:'line', label:'Tempo médio de retorno (dias)', data:vp.map(x=>x.tempo), borderColor:C.mid, backgroundColor:C.mid, tension:.3, spanGaps:true, yAxisID:'y1'}]},
     options:{maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{usePointStyle:true}}}, scales:{x:{grid:{display:false}}, y:{beginAtZero:true, grid:{color:'#eef3f9'}}, y1:{beginAtZero:true, position:'right', grid:{display:false}}}}});
 }
 
@@ -676,14 +683,17 @@ function vEscritorio(){
   <div class="card" style="padding:14px 22px">${cardH('Status nas tabelas abaixo','', segSt)}</div>
   <div class="grid2">${tableBlock('aggE','Indicadores por escritório', COLS.agg('Escritório'), porEsc, 'Pendentes_por_escritorio')}${tableBlock('aggA','Indicadores por advogado', COLS.agg('Advogado / responsável'), porAdv, 'Pendentes_por_advogado')}</div>
   ${tableBlock('escd','Requisições com os escritórios', COLS.esc(), Ef.sort((a,b)=>(b._diasAberto||0)-(a._diasAberto||0)), 'Requisicoes_escritorios')}`);
-  chart('cEsc', barCfg(graf.map(x=>x.nome.length>40?x.nome.slice(0,39)+'…':x.nome), [['Aguardando execução',graf.map(x=>x.exec),C.mid],['Aguardando informações',graf.map(x=>x.info),C.warn],['Executada',graf.map(x=>x.executada),C.ok]], {horizontal:true, stacked:true}));
+  chart('cEsc', barCfg(graf.map(x=>x.nome.length>40?x.nome.slice(0,39)+'…':x.nome), [['Aguardando execução',graf.map(x=>x.exec),C.navy],['Aguardando informações',graf.map(x=>x.info),C.sky],['Executada',graf.map(x=>x.executada),C.pastel]], {horizontal:true, stacked:true}));
 }
 
 /* ---------- Scae × Field ---------- */
-const SF_ST = ['Encerrada com ocorrência','Cancelada','Não agendado','Finalizada','Paralisada'];
-const SF_OC = ['Executado','Finalizada','Cliente ausente','Inviabilidade técnica','Serviço já executado','Duplicidade'];
-const stFieldC = o => { const s = norm(o.status_field); return !s?'Sem status Field' : /encerrad.*ocorr/.test(s)?'Encerrada com ocorrência' : /cancel/.test(s)?'Cancelada' : /nao agend/.test(s)?'Não agendado' : /finaliz/.test(s)?'Finalizada' : /paraliz|paralis/.test(s)?'Paralisada' : o.status_field; };
-const ocC = o => { const s = norm(o.ocorrencia); return !s?'Sem ocorrência' : /duplic/.test(s)?'Duplicidade' : /servico ja|ja execut/.test(s)?'Serviço já executado' : /inviab/.test(s)?'Inviabilidade técnica' : /ausent/.test(s)?'Cliente ausente' : /finaliz/.test(s)?'Finalizada' : /execut/.test(s)?'Executado' : 'Outras ocorrências'; };
+// status do Field na ordem do fluxo ("Agendado para 30/10" vira "Agendado", para não abrir uma coluna por dia)
+const SF_ST = ['Não agendado','Agendado','Em rota','Iniciada','Paralisada','Encerrada com ocorrência','Cancelada','Finalizada'];
+const stFieldC = o => { const s = norm(o.status_field); return !s?'Sem status Field' : /encerrad.*ocorr/.test(s)?'Encerrada com ocorrência' : /cancel/.test(s)?'Cancelada' : /nao agend/.test(s)?'Não agendado' : /^agendad/.test(s)?'Agendado' : /em rota/.test(s)?'Em rota' : /iniciad/.test(s)?'Iniciada' : /finaliz/.test(s)?'Finalizada' : /paraliz|paralis/.test(s)?'Paralisada' : o.status_field; };
+// ocorrência de encerramento do SCAE exatamente como vem da base (só tira o código: "0-Executado" → "Executado")
+const SEM_OC = 'Sem ocorrência (OS em aberto)', OC_ROT = new Map();
+const ocC = o => { const t = cleanTxt(String(o.ocorrencia||'')).replace(/^\d+\s*-\s*/,''), k = norm(t); if (!k) return SEM_OC; if (!OC_ROT.has(k)) OC_ROT.set(k, t); return OC_ROT.get(k); };
+const ocExec = oc => norm(oc) === 'executado';
 function sfRows(){
   const reqOS = new Map(); S.req.forEach(r => r._osIds.forEach(i => { if (!reqOS.has(i)) reqOS.set(i, r); }));
   const f = S.filt, set = (filtrosNaoPeriodo() || f.de || f.ate) ? new Set(getReqs().map(r=>r.chave)) : null, out = [];
@@ -695,28 +705,43 @@ function sfRows(){
 function vScaeField(){
   const A = sfRows(), g = S.gran.sf || 'semana', t = today(), ref = A.map(x=>x.d).filter(d=>d<=t).sort().pop() || t;
   const emSem = x => weekStart(x.d)===weekStart(ref), emMes = x => x.d.slice(0,7)===ref.slice(0,7);
-  const stCols = [...SF_ST, ...[...new Set(A.map(x=>x.st))].filter(x=>!SF_ST.includes(x) && x!=='Sem status Field'), ...(A.some(x=>x.st==='Sem status Field')?['Sem status Field']:[])];
-  const cor = {'Encerrada com ocorrência':C.bad,'Cancelada':C.gray,'Não agendado':C.warn,'Finalizada':C.ok,'Paralisada':C.mid,'Sem status Field':C.pastel};
+  const stCols = [...SF_ST.filter(x=>A.some(y=>y.st===x)), ...[...new Set(A.map(x=>x.st))].filter(x=>!SF_ST.includes(x) && x!=='Sem status Field'), ...(A.some(x=>x.st==='Sem status Field')?['Sem status Field']:[])];
+  const bl = blues(stCols.length), cor = Object.fromEntries(stCols.map((c,i)=>[c,bl[i]]));
   const supCh = sub => { const m = groupBy(sub, x=>x.sup); const sups = [...m].sort((a,b)=>b[1].length-a[1].length); return {sups:sups.map(x=>x[0]), data:st=>sups.map(([,a])=>a.filter(x=>x.st===st).length)}; };
   const SW = supCh(A.filter(emSem)), SM = supCh(A.filter(emMes));
   const per = []; const pk = [...new Set(A.map(x=>gk(x.d,g)))].filter(k=>k<=gk(t,g)).sort().slice(-LIM[g]).reverse();
   pk.forEach(k => { const a = A.filter(x=>gk(x.d,g)===k); groupBy(a, x=>x.sup).forEach((b,sup) => { const o = {periodo:glabel(k,g), sup, tot:b.length}; stCols.forEach(c => o[c] = b.filter(x=>x.st===c).length); per.push(o); }); });
-  const oc = pk.map(k => { const a = A.filter(x=>gk(x.d,g)===k), o = {periodo:glabel(k,g), tot:a.length}; [...SF_OC,'Outras ocorrências','Sem ocorrência'].forEach(c => o[c] = a.filter(x=>x.oc===c).length); return o; });
-  const sv = [...groupBy(A, x=>x.tipo)].map(([tp,a]) => { const m = tp.match(/^\s*(\d+)\s*[-–:.]?\s*(.*)$/); return {cod:m?m[1]:'', desc:m&&m[2]?m[2]:tp, qtd:a.length, pct:(a.length/A.length*100).toFixed(1).replace('.',',')+'%', oc:a.filter(x=>!['Executado','Finalizada','Sem ocorrência'].includes(x.oc)).length}; }).sort((a,b)=>b.qtd-a.qtd);
+  // ocorrências: todos os tipos que existem na base, do mais frequente ao menos (Executado primeiro, sem ocorrência por último)
+  const ocCnt = new Map(); A.forEach(x => ocCnt.set(x.oc,(ocCnt.get(x.oc)||0)+1));
+  const ocCols = [...ocCnt].filter(([k])=>k!==SEM_OC).sort((a,b)=>(ocExec(b[0])-ocExec(a[0])) || b[1]-a[1]).map(([k])=>k).concat(ocCnt.has(SEM_OC)?[SEM_OC]:[]);
+  const oc = pk.map(k => { const a = A.filter(x=>gk(x.d,g)===k), o = {periodo:glabel(k,g), tot:a.length}; ocCols.forEach(c => o[c] = a.filter(x=>x.oc===c).length); return o; });
+  const comOc = A.filter(x=>x.oc!==SEM_OC), naoExec = comOc.filter(x=>!ocExec(x.oc));
+  const ocTipos = ocCols.map(c => { const a = A.filter(x=>x.oc===c); return {oc:c, qtd:a.length, pct:(a.length/(A.length||1)*100).toFixed(1).replace('.',',')+'%', sem:a.filter(emSem).length, mes:a.filter(emMes).length,
+    field:(()=>{ const m = groupBy(a.filter(x=>x.st!=='Sem status Field'), x=>x.st); const top = [...m].sort((p,q)=>q[1].length-p[1].length)[0]; return top ? `${top[0]} (${top[1].length})` : '—'; })()}; });
+  const sv = [...groupBy(A, x=>x.tipo)].map(([tp,a]) => { const m = tp.match(/^\s*(\d+)\s*[-–:.]?\s*(.*)$/); return {cod:m?m[1]:'', desc:m&&m[2]?m[2]:tp, qtd:a.length, pct:(a.length/A.length*100).toFixed(1).replace('.',',')+'%', oc:a.filter(x=>x.oc!==SEM_OC && !ocExec(x.oc)).length}; }).sort((a,b)=>b.qtd-a.qtd);
   const n = st => A.filter(x=>x.st===st).length;
+  // gráfico por período: as 5 ocorrências mais frequentes (sem contar Executado) + "Demais ocorrências"
+  const top5 = ocCols.filter(c=>c!==SEM_OC && !ocExec(c)).slice(0,5), exe = ocCols.find(ocExec), resto = ocCols.filter(c=>c!==SEM_OC && c!==exe && !top5.includes(c));
+  const serOc = [...(exe?[exe]:[]), ...top5, ...(resto.length?['Demais ocorrências']:[])];
   V(`${semDados()}${!S.os.length?`<div class="note">Nenhuma OS carregada. Envie as bases SCAE e Field em <b>Carregar bases</b>.</div>`:''}
-  <div class="kpis">${kpi('OS (SCAE × Field)',A.length,'status e SUP pelo cruzamento','navy')}${SF_ST.map((x,i)=>kpi(x,n(x),'', ['bad','','warn','ok',''][i])).join('')}</div>
+  <div class="kpis">${kpi('OS (SCAE × Field)',A.length,'status e SUP pelo cruzamento','navy')}${SF_ST.filter(x=>n(x)).map(x=>kpi(x,n(x),'', {'Encerrada com ocorrência':'bad','Não agendado':'warn','Finalizada':'ok'}[x]||'')).join('')}</div>
   <div class="card">${cardH('Status da atividade por superintendência','Semana de '+fmt(weekStart(ref))+' e mês de '+MESES[+ref.slice(5,7)-1]+'/'+ref.slice(2,4)+' (último período com dados). Data = data do Field, ou encerramento/abertura no SCAE.')}</div>
   <div class="grid2"><div class="card">${cardH('Semanal','Semana de '+fmt(weekStart(ref)))}<div class="chart-box" style="height:${Math.max(240,SW.sups.length*34)}px"><canvas id="cSfS"></canvas></div></div>
   <div class="card">${cardH('Mensal',MESES[+ref.slice(5,7)-1]+'/'+ref.slice(2,4))}<div class="chart-box" style="height:${Math.max(240,SM.sups.length*34)}px"><canvas id="cSfM"></canvas></div></div></div>
-  <div class="card">${cardH('Ocorrências por período','Executado, finalizada, cliente ausente, inviabilidade técnica, serviço já executado e duplicidade.', segN('sf',[['semana','Semanal'],['mes','Mensal']]))}<div class="chart-box"><canvas id="cSfO"></canvas></div></div>
-  ${tableBlock('sfo','Quantidade de cada ocorrência · '+(g==='mes'?'mensal':'semanal'), [col('Período','periodo'), ...SF_OC.map(c=>col(c,c)), col('Outras ocorrências','Outras ocorrências'), col('Sem ocorrência','Sem ocorrência'), col('Total','tot')], oc, 'Ocorrencias_por_periodo')}
+  <div class="kpis">${kpi('Tipos de ocorrência',ocCols.filter(c=>c!==SEM_OC).length,'encontrados no SCAE','navy')}${kpi('Executadas',exe?ocCnt.get(exe):0,'ocorrência “Executado”','ok')}${kpi('Encerradas sem execução',naoExec.length,'demais ocorrências','bad')}${kpi('Sem ocorrência',ocCnt.get(SEM_OC)||0,'OS ainda em aberto no SCAE','warn')}</div>
+  <div class="card">${cardH('Todas as ocorrências do SCAE','Cada tipo de ocorrência de encerramento, do mais frequente ao menos frequente.')}<div class="chart-box" style="height:${Math.max(240, ocCols.length*30)}px"><canvas id="cSfT"></canvas></div></div>
+  ${tableBlock('sft','Tipos de ocorrência', [col('Ocorrência','oc'), col('Quantidade','qtd'), col('% do total','pct'), col('Na semana','sem'), col('No mês','mes'), col('Status mais comum no Field','field')], ocTipos, 'Tipos_de_ocorrencia', 'Semana de '+fmt(weekStart(ref))+' · mês de '+MESES[+ref.slice(5,7)-1]+'/'+ref.slice(2,4)+'.')}
+  <div class="card">${cardH('Ocorrências por período','Executado, as 5 ocorrências mais frequentes e as demais somadas. A tabela abaixo traz todos os tipos.', segN('sf',[['semana','Semanal'],['mes','Mensal']]))}<div class="chart-box"><canvas id="cSfO"></canvas></div></div>
+  ${tableBlock('sfo','Quantidade de cada ocorrência · '+(g==='mes'?'mensal':'semanal'), [col('Período','periodo'), ...ocCols.map(c=>col(c,c)), col('Total','tot')], oc, 'Ocorrencias_por_periodo')}
   ${tableBlock('sfp','Status da atividade por superintendência · '+(g==='mes'?'mensal':'semanal'), [col('Período','periodo'), col('Superintendência','sup'), ...stCols.map(c=>col(c,c)), col('Total','tot')], per, 'Status_por_SUP', 'Use os filtros das colunas para escolher a superintendência ou o período.')}
   ${tableBlock('sfs','Serviços gerados · maior para menor ofensor', [col('#','', r=>sv.indexOf(r)+1), col('Código','cod'), col('Descrição do serviço','desc'), col('Quantidade','qtd'), col('% do total','pct'), col('Com ocorrência (não executadas)','oc')], sv, 'Servicos_gerados')}`);
   const bar = (id, S_) => chart(id, barCfg(S_.sups.map(x=>x.length>28?x.slice(0,27)+'…':x), stCols.map(c=>[c, S_.data(c), cor[c]||C.sky]), {horizontal:true, stacked:true}));
   bar('cSfS', SW); bar('cSfM', SM);
-  const ocAll = [...SF_OC,'Outras ocorrências'], ocCor = [C.ok, C.navy, C.warn, C.bad, C.mid, C.gray, C.pastel];
-  chart('cSfO', barCfg(oc.slice().reverse().map(x=>x.periodo), ocAll.map((c,i)=>[c, oc.slice().reverse().map(x=>x[c]), ocCor[i]]), {stacked:true}));
+  const lt = x => x.length>44 ? x.slice(0,43)+'…' : x;
+  chart('cSfT', (() => { const cfg = barCfg(ocCols.map(lt), [['OS', ocCols.map(c=>ocCnt.get(c)), C.mid]], {horizontal:true});
+    cfg.data.datasets[0].backgroundColor = ocCols.map(c => ocExec(c) ? C.navy : c===SEM_OC ? C.baby : C.sky); return cfg; })());
+  const ocP = oc.slice().reverse(), cores = blues(serOc.length);
+  chart('cSfO', barCfg(ocP.map(x=>x.periodo), serOc.map((c,i)=>[c, ocP.map(x => c==='Demais ocorrências' ? resto.reduce((a,r)=>a+(x[r]||0),0) : x[c]), cores[i]]), {stacked:true}));
 }
 
 function duracoesHist(R){ // tempo em cada etapa pelo histórico de cargas
@@ -750,9 +775,9 @@ function vFases(){
   <div class="card">${cardH('Jornada de uma requisição','Datas do Projuris + mudanças registradas a cada carga.')}<div class="tools"><input type="text" id="qReq" placeholder="Nº da requisição" onkeydown="if(event.key==='Enter')timeline()" style="flex:1;max-width:320px"><button class="btn sm" onclick="timeline()">Ver jornada</button></div><div id="tl"></div></div>
   ${tableBlock('saf','Tempo médio por fase · por mês da requisição', [col('Mês','mes'), col('Requisições','n'), col('Finalizadas','fin'), col('Time interno · aprovação (d)','ap'), col('Execução (d)','ex'), col('Escritório · finalização (d)','fi'), col('Ciclo completo (d)','tot')], safra, 'Tempo_por_fase')}
   ${tableBlock('mov','Movimentações registradas', COLS.mov(), mov, 'Movimentacoes', 'A cada carga diária, só as mudanças de status ou de responsável são gravadas.')}`);
-  const lab = a => a.map(x=>x.fase.length>42?x.fase.slice(0,41)+'…':x.fase);
+  const lab = a => a.map(x => { const [q, st] = x.fase.split(' · '); return st ? [q, st] : x.fase; }); // rótulo em duas linhas: quem · fase
   chart('cFaseTI', barCfg(lab(fTI), [['Requisições',fTI.map(x=>x.qtd),C.navy]], {horizontal:true}));
-  chart('cFaseES', barCfg(lab(fES), [['Requisições',fES.map(x=>x.qtd),C.warn]], {horizontal:true}));
+  chart('cFaseES', barCfg(lab(fES), [['Requisições',fES.map(x=>x.qtd),C.sky]], {horizontal:true}));
 }
 function timeline(){
   const q = normOS(document.getElementById('qReq').value) || document.getElementById('qReq').value.trim(); const el = document.getElementById('tl');
@@ -786,8 +811,8 @@ function vRevogacoes(){
   <div class="grid2">${tableBlock('revp','Entrantes e finalizadas por '+{dia:'dia',semana:'semana',mes:'mês'}[g], [col('Período','label'), col('Entrantes','qtd'), col('Finalizadas','fin')], per, 'Revogacoes_por_periodo')}${tableBlock('revs','Status atual', [col('Status','status'), col('Requisições','qtd')], porSt, 'Revogacoes_por_status')}</div>
   ${tableBlock('revf','Finalizadas no mês ('+rotMes+')', COLS.rev(), finMes.sort((a,b)=>String(b.data_finalizacao).localeCompare(String(a.data_finalizacao))), 'Revogacoes_finalizadas_no_mes')}
   ${tableBlock('rev','Revogações', COLS.rev(), RV.sort((a,b)=>String(b.data_entrada||'').localeCompare(String(a.data_entrada||''))), 'Revogacoes')}`);
-  chart('cRevSt', {type:'doughnut', data:{labels:stRevRows.map(x=>x.status), datasets:[{data:stRevRows.map(x=>x.qtd), backgroundColor:stRevRows.map(x=>({'Finalizada':C.ok,'Aguardando aprovação':C.warn,'Aguardando informação':C.mid,'Em requisição':C.pastel,'Executada':C.navy})[x.status]||C.gray), borderWidth:2, borderColor:'#fff'}]}, options:{maintainAspectRatio:false, cutout:'58%', plugins:{legend:{position:'right', labels:{usePointStyle:true}}}}});
-  chart('cRev', barCfg(keys.map(k=>glabel(k,g)), [['Entrantes',keys.map(k=>s.get(k)||0),C.navy],['Finalizadas',keys.map(k=>sf.get(k)||0),C.ok]], {type:g==='dia'?'line':'bar'}));
+  chart('cRevSt', {type:'doughnut', data:{labels:stRevRows.map(x=>x.status), datasets:[{data:stRevRows.map(x=>x.qtd), backgroundColor:blues(stRevRows.length), borderWidth:2, borderColor:'#fff'}]}, options:{maintainAspectRatio:false, cutout:'58%', plugins:{legend:{position:'right', labels:{usePointStyle:true}}}}});
+  chart('cRev', barCfg(keys.map(k=>glabel(k,g)), [['Entrantes',keys.map(k=>s.get(k)||0),C.navy],['Finalizadas',keys.map(k=>sf.get(k)||0),C.pastel]], {type:g==='dia'?'line':'bar'}));
 }
 
 function vBase(){
@@ -812,9 +837,9 @@ async function carregaUso(){
 function vCargas(){
   setTimeout(carregaUso, 0);
   V(`<div class="card">${cardH('Carregar bases','Envie as planilhas como saem dos sistemas. A plataforma reconhece as colunas sozinha; você só confere e clica em Importar. Só o que mudou é gravado.')}
-  <div class="uploads"><div class="up" style="border-color:#f0c96a;background:#fffdf6"><h4>Modelo do PPT</h4><p>Apresentação da reunião semanal (.pptx). A plataforma troca só os gráficos, datas e percentuais. ${S.modelo?'<b>Modelo carregado.</b>':'Também pode ficar no site como <b>modelo.pptx</b>.'}</p><input type="file" accept=".pptx" onchange="definirModelo(this)"></div>${Object.entries(TIPOS).map(([k,t])=>`<div class="up"><h4>${esc(t.t)}</h4><p>${esc(t.d)}</p><label>Data de referência</label><br><input type="date" id="dt_${k}" value="${today()}"><input type="file" accept=".xlsx,.xls,.xlsm,.csv,.txt" onchange="onFile('${k}',this)">${infoBase(k)}</div>`).join('')}</div></div>
+  <div class="uploads"><div class="up" style="border-color:var(--sky);background:var(--baby2)"><h4>Modelo do PPT</h4><p>Apresentação da reunião semanal (.pptx). A plataforma troca só os gráficos, datas e percentuais. ${S.modelo?'<b>Modelo carregado.</b>':'Também pode ficar no site como <b>modelo.pptx</b>.'}</p><input type="file" accept=".pptx" onchange="definirModelo(this)"></div>${Object.entries(TIPOS).map(([k,t])=>`<div class="up"><h4>${esc(t.t)}</h4><p>${esc(t.d)}</p><label>Data de referência</label><br><input type="date" id="dt_${k}" value="${today()}"><input type="file" accept=".xlsx,.xls,.xlsm,.csv,.txt" onchange="onFile('${k}',this)">${infoBase(k)}</div>`).join('')}</div></div>
   <div class="card" id="uso">${cardH('Uso do banco de dados','Plano gratuito do Supabase: 500 MB. Acima disso o projeto fica só leitura.')}<div class="desc" id="usoCorpo">Consultando…</div></div>
-  ${tableBlock('cargas','Histórico de cargas', [col('Data/hora','',r=>fmtDT(r.criado_em)), col('Base','',r=>TIPOS[r.tipo]?.t||r.tipo), col('Arquivo','arquivo'), colD('Referência','data_referencia'), col('Linhas','linhas'), col('Novos','novas'), col('Alterados','alteradas')], S.cargas, 'Historico_cargas')}`);
+  ${tableBlock('cargas','Histórico de cargas', [col('Data/hora','',r=>fmtDT(r.criado_em)), col('Base','',r=>TIPOS[r.tipo]?.t||r.tipo), col('Arquivo','arquivo'), colD('Referência','data_referencia'), col('Linhas','linhas'), col('Novos','novas'), col('Alterados','alteradas'), col('Ações','',()=>'',r=>`<button class="btn sm light" style="color:var(--bad);border-color:#f3c7c1" onclick="pedirApagarCarga(${r.id})">Apagar carga</button>`)], S.cargas, 'Historico_cargas', 'Desfaz uma carga específica sem apagar a base inteira.')}`);
 }
 
 function vConfig(){
@@ -995,6 +1020,63 @@ async function apagarBase(k){
     closeModal(); toast('Atualizando a plataforma…', false, true); await load(true);
     toast(`✔ ${TIPOS[k].t}: ${fmtI(data?.linhas||0)} registros apagados${k==='req' && hist ? ', com o histórico de fases' : ''}.`);
   } catch (e) { console.error(e); btn.disabled = false; btn.textContent = 'Apagar base'; toast('Erro ao apagar: ' + erroTxt(e) + (/cob_apagar_base/.test(erroTxt(e)) ? ' — rode o schema.sql mais recente.' : ''), true); }
+}
+/* ---------- Apagar uma carga específica ---------- */
+const TAB_CARGA = {req:'cob_requisicoes', proc:'cob_processos', scae:'cob_os', field:'cob_os', rev:'cob_revogacoes'};
+const COLS_FIELD = ['status_field','field_data','field_inicio_sla','field_fim_sla','field_parecer'];
+async function stampCarga(c){ // carimbo (atualizado_em) que a carga gravou nas linhas
+  const t0 = Date.parse(c.criado_em), lo = new Date(t0-90e3).toISOString(), hi = new Date(t0+30e3).toISOString();
+  const r = await sb.from(TAB_CARGA[c.tipo]).select('atualizado_em').gte('atualizado_em',lo).lte('atualizado_em',hi).order('atualizado_em',{ascending:false}).limit(1);
+  if (r.error) throw r.error; return r.data?.[0]?.atualizado_em || null;
+}
+async function pedirApagarCarga(id){
+  const c = S.cargas.find(x=>x.id===id); if (!c) return;
+  modal(`<h3 style="margin:0 0 6px">Apagar carga?</h3><div class="desc">Verificando o que essa carga gravou…</div>`);
+  try {
+    const tb = TAB_CARGA[c.tipo], st = await stampCarga(c); let n = 0, h = 0;
+    if (st) { const r = await sb.from(tb).select('*',{count:'exact',head:true}).eq('atualizado_em',st); if (r.error) throw r.error; n = r.count||0; }
+    if (c.tipo==='req') { const r = await sb.from('cob_historico').select('*',{count:'exact',head:true}).eq('carga_id',c.id); if (r.error) throw r.error; h = r.count||0; }
+    S.apCarga = {id, st, n, h};
+    const efeito = c.tipo==='field' ? `Os dados do Field dessas <b>${fmtI(n)}</b> OSs serão limpos (as OSs do SCAE continuam; OSs que existiam só no Field são removidas).`
+      : `<b>${fmtI(n)}</b> registros gravados por essa carga serão apagados${c.tipo==='req' ? ` e <b>${fmtI(h)}</b> movimentações do histórico de fases` : ''}.`;
+    modal(`<h3 style="margin:0 0 6px;color:var(--bad)">Apagar esta carga?</h3>
+    <div class="desc"><b>${esc(TIPOS[c.tipo]?.t||c.tipo)}</b> · ${esc(c.arquivo||'')}<br>Carga de ${esc(fmtDT(c.criado_em))} · referência ${esc(fmt(c.data_referencia))} · ${fmtI(c.linhas)} linhas (${fmtI(c.novas)} novos, ${fmtI(c.alteradas)} alterados)</div>
+    <div class="note" style="margin-top:12px">${st||h ? efeito : 'Nenhum registro gravado por essa carga foi encontrado: já foram atualizados por cargas posteriores. Só a linha do histórico será removida.'}</div>
+    <div class="desc">${c.alteradas>0 ? `Esta carga alterou <b>${fmtI(c.alteradas)}</b> registros que já existiam: eles serão apagados, <b>não voltam ao valor anterior</b>. Para restaurar, importe de novo a planilha anterior. ` : ''}Registros atualizados depois por outra carga não são tocados. <b>Não dá para desfazer.</b></div>
+    <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin:16px 0 6px">Para confirmar, digite APAGAR</label>
+    <input type="text" id="apConf" autocomplete="off" style="width:100%" oninput="document.getElementById('apcOk').disabled = this.value.trim().toUpperCase() !== 'APAGAR'">
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px"><button class="btn light" onclick="closeModal()">Cancelar</button><button class="btn" id="apcOk" style="background:var(--bad)" disabled onclick="apagarCarga()">Apagar carga</button></div>`);
+    setTimeout(()=>document.getElementById('apConf')?.focus(), 50);
+  } catch (e) { console.error(e); closeModal(); toast('Não consegui verificar a carga: '+erroTxt(e), true); }
+}
+async function apagarCarga(){
+  const {id, st, n} = S.apCarga || {}, c = S.cargas.find(x=>x.id===id), btn = document.getElementById('apcOk'); if (!c) return;
+  btn.disabled = true; btn.textContent = 'Apagando…';
+  try {
+    const tb = TAB_CARGA[c.tipo], pk = PK[tb];
+    if (c.tipo==='req') { const r = await sb.from('cob_historico').delete().eq('carga_id', id); if (r.error) throw r.error; }
+    if (st) {
+      let feito = 0;
+      for (;;) { // em lotes, para não estourar o tempo limite do banco
+        const sel = await sb.from(tb).select(pk).eq('atualizado_em', st).order(pk).range(0, c.tipo==='field' ? 0 : 299);
+        if (c.tipo==='field') {
+          const all = []; for (let i=0;;i+=1000) { const q = await sb.from(tb).select(pk+',tipo_os,data_abertura').eq('atualizado_em', st).order(pk).range(i,i+999); if (q.error) throw q.error; all.push(...q.data); if (q.data.length<1000) break; }
+          const solo = all.filter(o=>!o.tipo_os && !o.data_abertura).map(o=>o[pk]), resto = all.filter(o=>o.tipo_os || o.data_abertura).map(o=>o[pk]);
+          for (let i=0;i<solo.length;i+=300) { const r = await sb.from(tb).delete().in(pk, solo.slice(i,i+300)); if (r.error) throw r.error; }
+          for (let i=0;i<resto.length;i+=300) { const r = await sb.from(tb).update(Object.fromEntries(COLS_FIELD.map(k=>[k,null]))).in(pk, resto.slice(i,i+300)); if (r.error) throw r.error; }
+          feito = all.length; break;
+        }
+        if (sel.error) throw sel.error; if (!sel.data.length) break;
+        const del = await sb.from(tb).delete({count:'exact'}).in(pk, sel.data.map(o=>o[pk]));
+        if (del.error) throw del.error;
+        if (!del.count) throw new Error('o banco não permitiu apagar (sem permissão de exclusão). Rode o schema.sql mais recente ou libere DELETE para usuários logados.');
+        feito += del.count; toast(`Apagando… ${fmtI(feito)} de ${fmtI(n)}`, false, true);
+      }
+    }
+    const r = await sb.from('cob_cargas').delete().eq('id', id); if (r.error) throw r.error;
+    closeModal(); toast('Atualizando a plataforma…', false, true); await load(true);
+    toast(`✔ Carga apagada: ${TIPOS[c.tipo]?.t||c.tipo} · ${c.arquivo||''}.`);
+  } catch (e) { console.error(e); btn.disabled = false; btn.textContent = 'Apagar carga'; toast('Erro ao apagar a carga: '+erroTxt(e), true); }
 }
 async function onFile(tipo, input){
   const file = input.files[0]; if (!file) return;
