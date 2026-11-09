@@ -1,0 +1,1412 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cumprimento de Obrigações</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{
+  --navy:#0b2545;--navy2:#13315c;--blue:#1d4e89;--mid:#3a6ea5;--sky:#7fb8e6;--pastel:#a9d3f2;--baby:#cfe6f7;--baby2:#eaf5fd;
+  --bg:#f3f8fc;--card:#fff;--line:#e3edf6;--text:#0b2545;--muted:#647b97;--ok:#2f8f5b;--warn:#b97800;--bad:#c0392b;
+  --shadow:0 1px 2px rgba(11,37,69,.04),0 10px 28px rgba(11,37,69,.06)
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Manrope,system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+/* ---------- hero ---------- */
+.hero{background:radial-gradient(1200px 400px at 85% -10%,#ffffff 0%,rgba(255,255,255,0) 60%),linear-gradient(135deg,#d9edfc 0%,#bfe0f8 55%,#a9d3f2 100%);color:var(--navy);padding:34px 24px 96px}
+.hero-in{max-width:1180px;margin:0 auto}
+.eyebrow{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:800;letter-spacing:.09em;color:var(--blue)}
+.eyebrow .dot{width:9px;height:9px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 3px rgba(29,78,137,.18)}
+.hero h1{font-size:30px;font-weight:800;margin:12px 0 10px;letter-spacing:-.01em}
+.lead{max-width:680px;margin:0 0 22px;line-height:1.6;color:#2c4a6e;font-size:14px}
+.tabs{display:flex;flex-wrap:wrap;gap:8px}
+.tab{display:flex;align-items:center;gap:9px;padding:10px 16px;border-radius:11px;border:1px solid rgba(11,37,69,.14);background:rgba(255,255,255,.5);color:var(--navy);font:inherit;font-weight:700;font-size:13px;cursor:pointer;transition:.15s}
+.tab:hover{background:rgba(255,255,255,.85)}
+.tab.on{background:var(--navy);border-color:var(--navy);color:#fff;box-shadow:0 6px 16px rgba(11,37,69,.22)}
+.tab svg{flex-shrink:0}
+.hero-foot{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center;margin-top:16px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.filters label{font-size:12px;font-weight:700;color:#2c4a6e}
+.filters select{max-width:190px}
+.hero-foot{align-items:flex-start}
+.meta{font-size:12px;color:#2c4a6e;margin-top:12px}
+.meta b{color:var(--navy)}
+/* ---------- conteúdo ---------- */
+.wrap{max-width:1180px;margin:-62px auto 40px;padding:0 24px;position:relative}
+.card{background:var(--card);border-radius:16px;border:1px solid var(--line);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:16px;min-width:0}
+.card-h{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.card h3{margin:0;font-size:16px;font-weight:800}
+.card .desc{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.5}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px}
+.grid2>.card{margin-bottom:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px 16px;box-shadow:var(--shadow)}
+.kpi .l{font-size:11px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.kpi .v{font-size:27px;font-weight:800;margin-top:6px;letter-spacing:-.01em}
+.kpi .s{font-size:12px;color:var(--muted);margin-top:2px}
+.kpi.navy{background:var(--navy);border-color:var(--navy);color:#fff}
+.kpi.navy .l,.kpi.navy .s{color:var(--pastel)}
+.kpi.warn .v{color:var(--warn)}.kpi.bad .v{color:var(--bad)}.kpi.ok .v{color:var(--ok)}
+select,input[type=date],input[type=text],input.search{font:inherit;font-size:13px;border:1px solid var(--line);border-radius:9px;padding:7px 10px;background:#fff;color:var(--text)}
+.hero select,.hero input{border-color:rgba(11,37,69,.14)}
+.btn{display:inline-flex;align-items:center;gap:7px;background:var(--navy);color:#fff;border:0;border-radius:10px;padding:9px 15px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--blue)}
+.btn.light{background:#fff;color:var(--navy);border:1px solid rgba(11,37,69,.14)}
+.btn.light:hover{background:var(--baby2)}
+.btn.sm{padding:6px 11px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:default}
+.tools{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pill{display:inline-block;background:var(--baby);color:var(--navy);border-radius:20px;padding:1px 9px;font-size:12px;font-weight:800;margin-left:6px;vertical-align:1px}
+.tbl-wrap{overflow:auto;max-height:540px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{position:sticky;top:0;background:#fff;color:#6b7f99;text-align:left;padding:10px 10px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;border-bottom:1px solid var(--line);z-index:1}
+td{padding:9px 10px;border-bottom:1px solid #eef3f9;white-space:nowrap;max-width:340px;overflow:hidden;text-overflow:ellipsis}
+td input[type=text]{width:100%;min-width:130px}
+tr:hover td{background:#f6fafe}
+.empty{text-align:center;color:#8a9bb2;padding:34px 10px}
+.more{font-size:12px;color:var(--muted);padding:10px}
+.b{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:700;background:var(--baby);color:var(--navy)}
+.b.ok{background:#e1f3e9;color:var(--ok)}.b.warn{background:#fdf1d7;color:var(--warn)}.b.bad{background:#fbe3e0;color:var(--bad)}.b.navy{background:var(--navy);color:#fff}.b.mid{background:#d9e8f6;color:var(--blue)}.b.gray{background:#eef1f5;color:#61708a}
+.seg{display:inline-flex;background:var(--baby2);border-radius:10px;padding:3px}
+.seg button{border:0;background:none;padding:6px 12px;border-radius:8px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;color:var(--navy)}
+.seg button.on{background:var(--navy);color:#fff}
+.chart-box{position:relative;height:290px}
+.uploads{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.up{border:1.5px dashed var(--pastel);background:#fbfdff;border-radius:14px;padding:16px}
+.up h4{margin:0 0 4px;font-size:14px}.up p{margin:0 0 10px;color:var(--muted);font-size:12.5px;line-height:1.5}
+.up input[type=file]{width:100%;font-size:12px;margin-top:8px}
+.up label{font-size:12px;color:var(--muted);font-weight:700}
+.note{background:var(--baby2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13px;margin-bottom:16px;line-height:1.55}
+.note.bad{background:#fbe3e0;border-color:#f3c7c1;color:#7a1f15}
+.modal-bg{position:fixed;inset:0;background:rgba(11,37,69,.45);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal{background:#fff;border-radius:18px;max-width:800px;width:100%;max-height:90vh;overflow:auto;padding:24px}
+.map-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin:16px 0}
+.map-grid label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px}
+.map-grid select{width:100%}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--navy);color:#fff;padding:12px 16px;border-radius:12px;box-shadow:var(--shadow);z-index:120;display:none;max-width:420px;font-weight:600}
+.toast.err{background:var(--bad)}
+.timeline{border-left:3px solid var(--pastel);margin:12px 0 0 8px;padding-left:18px}
+.ev{margin-bottom:12px;position:relative}
+.ev:before{content:'';position:absolute;left:-26px;top:3px;width:11px;height:11px;border-radius:50%;background:var(--navy)}
+.ev.m:before{background:var(--sky)}
+.ev .d{font-size:12px;color:var(--muted)}
+.resp-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px}
+.rc{background:linear-gradient(135deg,#e6f3fd,#cfe6f7);border:1px solid #c3def4;border-radius:14px;padding:15px}
+.rc .n{font-weight:800}.rc .q{font-size:30px;font-weight:800;margin-top:4px}.rc .s{color:#2c4a6e;font-size:12px}
+/* ---------- apresentação ---------- */
+#pres{position:fixed;inset:0;background:#000;z-index:100;display:none}
+.pstage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.pwrap{display:none;position:absolute;left:50%;top:50%;width:0;height:0}
+.pwrap.on{display:block}
+.pslide{position:absolute;left:-666.66px;top:-375px;width:1333.33px;height:750px;background:#fff;overflow:hidden;transform-origin:center center;font-family:'Aptos Display','Aptos','Segoe UI Variable Display','Segoe UI',Calibri,Arial,sans-serif;line-height:1.08}
+.pe{position:absolute;box-sizing:border-box}
+.pe .tx{overflow:hidden;letter-spacing:-.01em}
+.pe img{display:block}
+.pres-nav{position:absolute;bottom:16px;right:20px;display:flex;gap:8px;z-index:3;opacity:.35;transition:.2s}
+.pres-nav:hover{opacity:1}
+/* ---------- login ---------- */
+body.bloq .hero,body.bloq .wrap{display:none}
+#login{display:none;min-height:100vh;align-items:center;justify-content:center;padding:24px;background:radial-gradient(1200px 500px at 85% -10%,#fff 0%,rgba(255,255,255,0) 60%),linear-gradient(135deg,#d9edfc 0%,#bfe0f8 55%,#a9d3f2 100%)}
+body.bloq #login{display:flex}
+.lcard{background:#fff;border-radius:20px;box-shadow:0 20px 50px rgba(11,37,69,.14);padding:34px 32px;width:100%;max-width:400px}
+.lcard h1{font-size:24px;margin:12px 0 6px}
+.lcard label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:16px 0 6px}
+.lcard input{width:100%;padding:11px 12px;font-size:14px}
+.lcard .btn{width:100%;justify-content:center;margin-top:20px;padding:12px}
+.lcard .link{background:none;border:0;color:var(--blue);font:inherit;font-size:13px;font-weight:700;cursor:pointer;margin-top:14px;padding:0}
+.lmsg{font-size:13px;margin-top:14px;line-height:1.5;color:var(--muted)}
+.lmsg.err{color:var(--bad)}
+.user{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:#2c4a6e}
+@media(max-width:760px){.hero{padding:26px 16px 86px}.wrap{padding:0 16px}.grid2{grid-template-columns:1fr}.map-grid{grid-template-columns:1fr}.hero h1{font-size:25px}}
+</style>
+</head>
+<body class="bloq">
+<div id="login"><div class="lcard" id="lcard"></div></div>
+<header class="hero"><div class="hero-in">
+  <div class="eyebrow"><span class="dot"></span>ÁGUAS DO RIO · JURÍDICO</div>
+  <h1>Cumprimento de Obrigações</h1>
+  <p class="lead">Acompanha cada requisição de obrigação de fazer do Projuris até a finalização: triagem e abertura de OS pelo Grupo 1, execução das OSs no SCAE e no Field com o Grupo 2, e o retorno aos escritórios.</p>
+  <nav class="tabs" id="nav"></nav>
+  <div class="hero-foot">
+    <div class="filters">
+      <label>SUP</label><select id="fSup" onchange="setFilt()"></select>
+      <label>Escritório</label><select id="fEsc" onchange="setFilt()"></select>
+      <label>Tipo</label><select id="fTipo" onchange="setFilt()"><option value="">Todos</option><option value="dec">Decisões</option><option value="rio">Decisões – [RIO]</option></select>
+      <label>Com quem</label><select id="fGrupo" onchange="setFilt()"><option value="">Todos</option><option value="int">Time interno (G1 + G2)</option><option>Grupo 1</option><option>Grupo 2</option><option>Escritório</option><option>Em requisição</option><option>Finalizada</option><option>Encerrada</option><option>Outros</option></select>
+      <label>Processo</label><select id="fSit" onchange="setFilt()"></select>
+      <label>Responsável</label><select id="fResp" onchange="setFilt()" style="max-width:200px"></select>
+      <label>Requisições de</label><input type="date" id="fDe" onchange="setFilt()">
+      <label>até</label><input type="date" id="fAte" onchange="setFilt()">
+      <button class="btn sm light" onclick="clearFilt()">Limpar</button>
+    </div>
+    <div class="tools">
+      <button class="btn light" onclick="exportTudo()"><span data-i="download"></span>Excel geral</button>
+      <button class="btn light" onclick="exportPPT()"><span data-i="download"></span>PPT</button>
+      <button class="btn" onclick="apresentar()"><span data-i="play"></span>Apresentar</button>
+    </div>
+  </div>
+  <div class="hero-foot" style="margin-top:10px"><div class="meta" id="meta" style="margin:0">Carregando…</div><div class="user" id="user"></div></div>
+</div></header>
+<main class="wrap"><div id="alert"></div><div id="view"></div></main>
+<div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+<div id="pres"></div>
+
+<script>
+/* ===================== Conexão ===================== */
+const VERSAO = '2026.11.08-c';
+const SB_URL = 'https://ouhaiffxwxucmesprbjr.supabase.co';
+const SB_KEY = 'sb_publishable_pD8U39Nl4xhC-95t-1FQvw_giOSi7le';
+let sb = null;
+try { sb = supabase.createClient(SB_URL, SB_KEY); } catch (e) { console.error(e); }
+
+const S = { req:[], proc:[], os:[], hist:[], rev:[], pessoas:[], cargas:[], config:{}, osMap:new Map(), procMap:new Map(),
+  histBy:new Map(), reqMap:new Map(), mcache:new Map(), tables:{}, charts:{}, pch:{}, pcfg:{}, gran:{ent:'mes', rev:'mes'},
+  filt:{}, escSt:'', baseGrupo:'', pending:null, pi:0, snaps:[], blobs:[], modelo:null };
+const C = { navy:'#0b2545', blue:'#1d4e89', mid:'#3a6ea5', sky:'#7fb8e6', pastel:'#a9d3f2', baby:'#cfe6f7', warn:'#e0a526', bad:'#c0392b', ok:'#2f8f5b', gray:'#c9d3df' };
+const MESES = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const LIM = { dia:60, semana:26, mes:36 };
+const PK = { cob_pessoas:'id', cob_requisicoes:'chave', cob_processos:'chave', cob_historico:'id', cob_os:'os_id', cob_revogacoes:'chave', cob_cargas:'id', cob_config:'chave', cob_snapshots:'data' };
+
+/* ===================== Ícones ===================== */
+const ICONS = {
+  grid:'<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>',
+  inbox:'<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  target:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+  briefcase:'<rect width="20" height="14" x="2" y="7" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+  activity:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  filex:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="m9.5 12.5 5 5"/><path d="m14.5 12.5-5 5"/>',
+  db:'<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/>',
+  upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/>',
+  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+  play:'<polygon points="6 3 20 12 6 21 6 3"/>'
+};
+const ic = (n, s=17) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[n]||''}</svg>`;
+
+/* ===================== Utilidades ===================== */
+const norm = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim();
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const isoD = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const today = () => isoD(new Date());
+const fmt = d => d ? String(d).slice(0,10).split('-').reverse().join('/') : '';
+const fmtDT = ts => ts ? new Date(ts).toLocaleString('pt-BR') : '';
+const fmtN = n => Number(n).toLocaleString('pt-BR', {maximumFractionDigits:1});
+const fmtI = n => Number(n).toLocaleString('pt-BR');
+const avg = a => a.reduce((x,y)=>x+y,0) / a.length;
+const daysDiff = (a,b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
+const normOS = s => String(s ?? '').replace(/\D/g,'').replace(/^0+/,'');
+const PART = new Set(['da','de','do','das','dos','e']);
+function cleanTxt(v){ return String(v).replace(/\s+$/,'').replace(/^\s+/,''); }
+function parseDate(v){
+  if (v == null || v === '') return null;
+  if (v instanceof Date && !isNaN(v)) return isoD(v);
+  if (typeof v === 'number') { const d = XLSX.SSF.parse_date_code(v); return d && d.y > 1900 ? `${d.y}-${pad(d.m)}-${pad(d.d)}` : null; }
+  const s = String(v).trim();
+  let m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+  if (m) { let y = +m[3]; if (y < 100) y += 2000; return `${y}-${pad(+m[2])}-${pad(+m[1])}`; }
+  m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  return null;
+}
+function weekStart(d){ const dt = new Date(d + 'T12:00:00'); dt.setDate(dt.getDate() - ((dt.getDay()+6)%7)); return isoD(dt); }
+const gk = (d,g) => g==='mes' ? d.slice(0,7) : g==='semana' ? weekStart(d) : d.slice(0,10);
+function glabel(k,g){ if (g==='mes'){ const [y,m]=k.split('-'); return MESES[+m-1]+'/'+y.slice(2); } if (g==='semana') return 'Sem '+fmt(k).slice(0,5); return fmt(k).slice(0,5); }
+function serie(rows, field, g){ const m = new Map(); rows.forEach(r => { const d = r[field]; if (!d) return; const k = gk(d,g); m.set(k,(m.get(k)||0)+1); }); return m; }
+function groupBy(arr, fn){ const m = new Map(); arr.forEach(x => { const k = fn(x); if (!m.has(k)) m.set(k, []); m.get(k).push(x); }); return m; }
+
+function toast(msg, err=false, keep=false){ const t=document.getElementById('toast'); t.textContent=msg; t.className='toast'+(err?' err':''); t.style.display='block'; clearTimeout(S.tt); if(!keep) S.tt=setTimeout(()=>t.style.display='none', err?9000:5000); }
+function hideToast(){ document.getElementById('toast').style.display='none'; }
+function modal(html){ document.getElementById('modal').innerHTML=html; document.getElementById('modalBg').style.display='flex'; }
+function closeModal(){ document.getElementById('modalBg').style.display='none'; S.pending=null; }
+const V = html => document.getElementById('view').innerHTML = html;
+const kpi = (l,v,s='',cls='') => `<div class="kpi ${cls}"><div class="l">${esc(l)}</div><div class="v">${esc(typeof v==='number'?fmtI(v):v)}</div><div class="s">${esc(s)}</div></div>`;
+const B = (t,cls='') => `<span class="b ${cls}">${esc(t)}</span>`;
+const GRUPOS = { 'Grupo 1':'navy', 'Grupo 2':'mid', 'Escritório':'warn', 'Finalizada':'ok', 'Encerrada':'gray', 'Em requisição':'', 'Outros':'gray' };
+const bG = g => B(g, GRUPOS[g]||'');
+const cardH = (t, d='', tools='') => `<div class="card-h"><div><h3>${esc(t)}</h3>${d?`<div class="desc">${d}</div>`:''}</div>${tools}</div>`;
+
+/* ===================== Supabase ===================== */
+function erroTxt(e){ // texto legível de um erro do Supabase/PostgREST
+  if (!e) return 'erro desconhecido';
+  if (typeof e === 'string') return e;
+  const partes = [e.message, e.details, e.hint, e.code && `código ${e.code}`, e.status && `HTTP ${e.status}`].filter(Boolean);
+  return partes.length ? partes.join(' · ') : (()=>{ try { return JSON.stringify(e); } catch (x) { return String(e); } })();
+}
+async function fetchAll(t){
+  // 1ª página já traz o total (GET, para o erro vir com mensagem — HEAD não traz texto)
+  const first = await sb.from(t).select('*', {count:'exact'}).order(PK[t]).range(0, 999);
+  if (first.error) { const e = first.error; e.status = first.status; e.tabela = t; throw e; }
+  const out = [...first.data], pages = Math.ceil((first.count || first.data.length) / 1000);
+  for (let i=1; i<pages; i+=6) {
+    const res = await Promise.all(Array.from({length:Math.min(6, pages-i)}, (_,j) => sb.from(t).select('*').order(PK[t]).range((i+j)*1000, (i+j)*1000+999)));
+    res.forEach(r => { if (r.error) { const e = r.error; e.status = r.status; e.tabela = t; throw e; } out.push(...r.data); });
+  }
+  return out;
+}
+async function batches(table, rows, conflict, mode){
+  const size = 500, chunks = [];
+  for (let i=0; i<rows.length; i+=size) chunks.push(rows.slice(i, i+size));
+  let done = 0;
+  for (let i=0; i<chunks.length; i+=3) {
+    const res = await Promise.all(chunks.slice(i, i+3).map(c => mode==='upsert' ? sb.from(table).upsert(c, {onConflict:conflict}) : sb.from(table).insert(c)));
+    res.forEach(r => { if (r.error) throw r.error; });
+    done += chunks.slice(i, i+3).reduce((a,c)=>a+c.length, 0);
+    toast(`Gravando ${fmtI(done)} de ${fmtI(rows.length)}…`, false, true);
+  }
+}
+async function novaCarga(tipo, arquivo, dataRef, linhas, novas, alteradas){
+  const { data, error } = await sb.from('cob_cargas').insert({tipo, arquivo, data_referencia:dataRef, linhas, novas, alteradas}).select().single();
+  if (error) throw error; return data;
+}
+
+/* ===================== Equipe / regras ===================== */
+function prepPessoas(){
+  S.mcache = new Map();
+  S.pessoas.forEach(p => {
+    const sig = norm(p.nome).split(' ').filter(t=>t && !PART.has(t)), keys = [];
+    if (sig.length) keys.push(sig);
+    if (sig.length > 1) { keys.push([sig[0],sig[1]]); keys.push([sig[0],sig[sig.length-1]]); }
+    String(p.apelidos||'').split(/[,;]/).map(norm).filter(Boolean).forEach(a => { const t = a.split(' ').filter(x=>!PART.has(x)); if (t.length) keys.push(t); });
+    p._keys = keys;
+    p._sups = String(p.superintendencias||'').split(/[,;]/).map(norm).filter(Boolean);
+  });
+}
+function matchPessoas(txt){
+  if (!txt) return [];
+  if (S.mcache.has(txt)) return S.mcache.get(txt);
+  const segs = String(txt).split(/[,;\n\t|]+/).map(s => new Set(norm(s).split(' ').filter(Boolean))).filter(s=>s.size);
+  const res = S.pessoas.filter(p => p.ativo !== false && p._keys && segs.some(set => p._keys.some(k => k.every(w => set.has(w)))));
+  S.mcache.set(txt, res);
+  return res;
+}
+function g2PorSup(sup){
+  const n = norm(sup); if (!n) return null; const nt = n.split(' ');
+  return S.pessoas.find(p => p.grupo==='Grupo 2' && p.ativo!==false && p._sups.some(s => n===s || s.split(' ').every(w=>nt.includes(w)))) || null;
+}
+function categoria(t){ const n = norm(t); if (/\bacordo\b/.test(n)) return 'Acordo'; if (/liminar|tutela/.test(n)) return 'Liminar'; if (/revoga/.test(n)) return 'Revogação'; return 'Demais'; }
+function derivaGrupo(r, ms){
+  const st = norm(r.status);
+  if (/reprovad|cancelad/.test(st)) return 'Encerrada';
+  if (/finaliz/.test(st)) return 'Finalizada';
+  if (st.includes('aprova')) return ms.length ? 'Grupo 1' : 'Outros';
+  if (/execucao|informac/.test(st)) {
+    if (ms.some(p=>p.grupo==='Grupo 2')) return 'Grupo 2';
+    if (ms.length) return 'Grupo 1';
+    return 'Escritório';
+  }
+  if (/executad/.test(st)) return 'Escritório';
+  if (/requisic/.test(st)) return 'Em requisição';
+  if (r.data_finalizacao) return 'Finalizada';
+  return 'Outros';
+}
+function respDisplay(r, ms, g){
+  if (g==='Finalizada' || g==='Encerrada') return '—';
+  if (g==='Grupo 1') return ms.length >= 3 ? 'Grupo 1' : ms.map(p=>p.nome).join(', ');
+  if (g==='Grupo 2') { const p = ms.find(x=>x.grupo==='Grupo 2'); return p ? p.nome : 'Grupo 2'; }
+  return r.usuario_responsavel_raw || '—';
+}
+const osExec = o => !!o && (/execut/.test(norm(o.ocorrencia)) || norm(o.status_field)==='finalizada');
+const osEncSemExec = o => !!o && !osExec(o) && (!!o.data_encerramento || /encerrad|cancelad/.test(norm(o.status_field)));
+function prazoField(o){
+  if (!o || !o.field_fim_sla) return '';
+  const fim = /finaliz|encerrad|cancelad/.test(norm(o.status_field)) ? (o.field_data || o.data_encerramento || today()) : today();
+  return fim <= o.field_fim_sla ? 'Dentro do prazo' : 'Fora do prazo';
+}
+function osSit(r){
+  if (!r._osIds.length) return 'Sem OS informada';
+  if (!r._osAll.length) return 'OS não localizada no SCAE/Field';
+  if (r._osExec.length) return 'Executada';
+  if (r._osEnc.length) return 'Encerrada sem execução';
+  return 'Em aberto';
+}
+function enrich(r){
+  const p = S.procMap.get(r.chave) || {};
+  r._sup = p.superintendencia || ''; r._proc = p.processo || ''; r._mat = p.matricula || r.matricula_os1 || '';
+  r._sit = p.situacao_processo || ''; r._esc = p.advogado_interno || ''; r._causa = p.causa_raiz_1 || '';
+  const ms = matchPessoas(r.usuario_responsavel_raw);
+  r._team = ms.length > 0;
+  r._grupo = derivaGrupo(r, ms);
+  r._resp = respDisplay(r, ms, r._grupo);
+  // Grupo 2: a responsável é a ponto focal da SUP do processo; o nome no Projuris fica registrado à parte
+  const g2Nome = ms.find(x=>x.grupo==='Grupo 2') || null;
+  r._g2 = r._grupo==='Grupo 2' ? (g2PorSup(r._sup) || g2Nome) : null;
+  r._g2Projuris = r._grupo==='Grupo 2' && g2Nome ? g2Nome.nome : '';
+  r._div = !!(r._g2 && g2Nome && r._g2.nome !== g2Nome.nome);
+  if (r._g2) r._resp = r._g2.nome;
+  r._cat = categoria(r.titulo);
+  r._osIds = [...new Set(String(r.os_lista || r.numero_os || '').split(/[;,\s]+/).map(normOS).filter(Boolean))];
+  r._osAll = r._osIds.map(i=>S.osMap.get(i)).filter(Boolean);
+  r._osExec = r._osAll.filter(osExec).sort((a,b)=>String(b.data_encerramento||b.field_data||'').localeCompare(String(a.data_encerramento||a.field_data||'')));
+  r._osEnc = r._osAll.filter(osEncSemExec);
+  r._os = r._osExec[0] || r._osEnc[0] || r._osAll[0] || null;
+  r._prazoFatal = r.prazo_fatal || r.prazo_fatal_processo || null;
+  r._diasG1 = r.data_requisicao && r.data_abertura_os1 ? daysDiff(r.data_requisicao, r.data_abertura_os1) : null;
+  if (r._diasG1 != null && r._diasG1 < 0) r._diasG1 = null;
+  const ev = S.histBy.get(r.chave); const last = ev && ev.length ? ev[ev.length-1].data_evento : (r.data_ultima_aprovacao || r.data_requisicao);
+  r._diasFase = last ? daysDiff(last, today()) : null;
+  r._diasAberto = r.data_requisicao ? daysDiff(r.data_requisicao, r.data_finalizacao || today()) : null;
+}
+
+/* ===================== Carga de dados ===================== */
+async function load(silent=false){
+  if (!silent) toast('Carregando dados…', false, true);
+  try {
+    if (!sb) throw new Error('Biblioteca do Supabase não carregou.');
+    // cada tabela é lida separadamente: uma falha não derruba as outras e o aviso diz qual foi
+    const nomes = ['cob_pessoas','cob_config','cob_requisicoes','cob_processos','cob_os','cob_historico','cob_revogacoes','cob_cargas','cob_snapshots'];
+    const res = await Promise.allSettled(nomes.map(fetchAll)), d = {}, falhas = [];
+    res.forEach((r,i) => { if (r.status === 'fulfilled') d[nomes[i]] = r.value; else { d[nomes[i]] = []; falhas.push([nomes[i], r.reason]); console.error(nomes[i], r.reason); } });
+    Object.assign(S, {pessoas:d.cob_pessoas, req:d.cob_requisicoes, proc:d.cob_processos, os:d.cob_os, hist:d.cob_historico, rev:d.cob_revogacoes, cargas:d.cob_cargas.sort((a,b)=>b.id-a.id), snaps:d.cob_snapshots});
+    S.config = Object.fromEntries(d.cob_config.map(c=>[c.chave, c.valor]));
+    document.getElementById('alert').innerHTML = falhas.length ? `<div class="note bad"><b>Não consegui ler ${falhas.length===1?'uma tabela':falhas.length+' tabelas'} do Supabase.</b> Rode o <b>schema.sql</b> mais recente no SQL Editor e recarregue a página.<ul style="margin:8px 0 0;padding-left:18px">${falhas.map(([t,e])=>`<li><b>${esc(t)}</b>: ${esc(erroTxt(e))}</li>`).join('')}</ul></div>` : '';
+  } catch (e) {
+    console.error(e);
+    document.getElementById('alert').innerHTML = `<div class="note bad"><b>Não consegui ler o Supabase.</b> Detalhe: ${esc(erroTxt(e))}</div>`;
+  }
+  prep(); fillSup(); render();
+  if (!silent) hideToast();
+}
+function prep(){
+  prepPessoas();
+  S.osMap = new Map(S.os.map(o=>[o.os_id, o]));
+  S.procMap = new Map(S.proc.map(p=>[p.chave, p]));
+  S.histBy = groupBy(S.hist, h=>h.chave);
+  S.histBy.forEach(a => a.sort((x,y)=>String(x.data_evento).localeCompare(String(y.data_evento)) || x.id-y.id));
+  S.reqMap = new Map();
+  S.req.forEach(r => { enrich(r); S.reqMap.set(r.chave, r); });
+  S.rev.forEach(v => { v._fin = v.data_finalizacao; v._diasFin = v.data_entrada && v.data_finalizacao ? daysDiff(v.data_entrada, v.data_finalizacao) : null; });
+  const ult = t => S.cargas.find(c=>c.tipo===t);
+  const partes = Object.keys(TIPOS).map(t => { const c = ult(t); return `${esc(TIPOS[t].curto)}: <b>${c ? esc(fmtDT(c.criado_em)) : '—'}</b>`; });
+  document.getElementById('meta').innerHTML = 'Última carga · ' + partes.join(' &nbsp;·&nbsp; ') + ` &nbsp;·&nbsp; <span style="opacity:.7">versão ${VERSAO}</span>`;
+}
+const FILTROS = ['fSup','fEsc','fTipo','fGrupo','fSit','fResp','fDe','fAte'], FKEY = {fSup:'sup', fEsc:'esc', fTipo:'tipo', fGrupo:'grupo', fSit:'sit', fResp:'resp', fDe:'de', fAte:'ate'};
+function opcoes(id, valores, rotulo='Todos'){ const el = document.getElementById(id); if (!el) return;
+  el.innerHTML = `<option value="">${rotulo}</option>` + valores.map(([k,v])=>`<option value="${esc(k)}">${esc(v)}</option>`).join(''); el.value = S.filt[FKEY[id]] || ''; }
+function fillSup(){ // preenche as listas dos filtros com o que existe na base
+  const uniq = f => { const m = new Map(); S.req.forEach(r => { const v = f(r); const n = norm(v); if (n && !m.has(n)) m.set(n, v); }); return [...m].sort((a,b)=>a[1].localeCompare(b[1])); };
+  opcoes('fSup', uniq(r=>r._sup), 'Todas'); opcoes('fEsc', uniq(r=>r._esc)); opcoes('fSit', uniq(r=>r._sit));
+  const resp = new Map(); S.req.forEach(r => { if (['Finalizada','Encerrada'].includes(r._grupo) || !r._resp || r._resp==='—') return; resp.set(r._resp, (resp.get(r._resp)||0)+1); });
+  opcoes('fResp', [...resp].sort((a,b)=>a[0].localeCompare(b[0])).map(([k,n])=>[k, `${k} (${n})`]));
+}
+function setFilt(){ S.filt = {}; FILTROS.forEach(id => S.filt[FKEY[id]] = document.getElementById(id).value); render(); }
+function clearFilt(){ FILTROS.forEach(id => document.getElementById(id).value = ''); setFilt(); }
+const tipoReq = r => /\brio\b/.test(norm(r.tipo_requisicao)) ? 'rio' : 'dec';
+function getReqs(){
+  const f = S.filt;
+  return S.req.filter(r => (!f.sup || norm(r._sup)===f.sup) && (!f.esc || norm(r._esc)===f.esc) && (!f.sit || norm(r._sit)===f.sit)
+    && (!f.tipo || tipoReq(r)===f.tipo) && (!f.resp || r._resp===f.resp)
+    && (!f.grupo || (f.grupo==='int' ? ['Grupo 1','Grupo 2'].includes(r._grupo) : r._grupo===f.grupo))
+    && (!f.de || (r.data_requisicao && r.data_requisicao>=f.de)) && (!f.ate || (r.data_requisicao && r.data_requisicao<=f.ate)));
+}
+const filtrosNaoPeriodo = () => ['sup','esc','tipo','grupo','sit','resp'].some(k => S.filt[k]);
+function periodoTxt(){
+  const f = S.filt; let t = f.de||f.ate ? `Requisições de ${f.de?fmt(f.de):'início'} a ${f.ate?fmt(f.ate):'hoje'}` : 'Todo o período';
+  const txt = id => document.getElementById(id)?.selectedOptions[0]?.text || '';
+  [['sup','fSup'],['esc','fEsc'],['tipo','fTipo'],['grupo','fGrupo'],['sit','fSit'],['resp','fResp']].forEach(([k,id]) => { if (f[k]) t += ' · ' + txt(id).replace(/ \(\d+\)$/,''); });
+  return t;
+}
+
+/* ===================== Tabelas / gráficos ===================== */
+const col = (l,k,f,h) => ({l,k,f,h});
+const colD = (l,k) => ({l,k,f:r=>fmt(r[k])});
+function cellVal(c,r){ return c.f ? c.f(r) : (r[c.k] ?? ''); }
+function tableBlock(id, title, cols, rows, file, desc=''){
+  S.tables[id] = {cols, rows, title, file:file||title, view:null};
+  return `<div class="card">${cardH(title + '', desc, `<div class="tools"><input class="search" placeholder="Buscar…" oninput="filterTable('${id}',this.value)"><button class="btn sm" onclick="exportTable('${id}')">${ic('download',14)}Excel</button></div>`).replace('</h3>', `<span class="pill">${fmtI(rows.length)}</span></h3>`)}<div class="tbl-wrap" id="tw_${id}">${tableInner(id, rows)}</div></div>`;
+}
+function tableInner(id, rows){
+  const {cols} = S.tables[id], lim = 300;
+  const body = rows.slice(0,lim).map(r => `<tr>${cols.map(c=>`<td>${c.h ? c.h(r) : esc(cellVal(c,r))}</td>`).join('')}</tr>`).join('');
+  return `<table><thead><tr>${cols.map(c=>`<th>${esc(c.l)}</th>`).join('')}</tr></thead><tbody>${body || `<tr><td colspan="${cols.length}" class="empty">Nenhum registro por aqui.</td></tr>`}</tbody></table>${rows.length>lim?`<div class="more">Exibindo ${lim} de ${fmtI(rows.length)}. Use a busca ou exporte para ver tudo.</div>`:''}`;
+}
+function filterTable(id, q){
+  clearTimeout(S.ft);
+  S.ft = setTimeout(() => {
+    const t = S.tables[id], n = norm(q); if (!t) return;
+    t.view = !n ? null : t.rows.filter(r => norm(t.cols.map(c=>cellVal(c,r)).join(' ')).includes(n));
+    document.getElementById('tw_'+id).innerHTML = tableInner(id, t.view || t.rows);
+  }, 250);
+}
+const toObjs = (cols, rows) => rows.map(r => { const o = {}; cols.forEach(c => o[c.l] = cellVal(c,r)); return o; });
+function exportTable(id){ const t = S.tables[id]; xlsxDownload([{name:t.title, rows:toObjs(t.cols, t.view||t.rows)}], t.file); }
+function xlsxDownload(sheets, file){
+  const wb = XLSX.utils.book_new();
+  sheets.forEach(s => { const ws = XLSX.utils.json_to_sheet(s.rows.length ? s.rows : [{'Sem registros':''}]); XLSX.utils.book_append_sheet(wb, ws, s.name.replace(/[\\\/?*\[\]:]/g,' ').slice(0,31)); });
+  XLSX.writeFile(wb, `${file}_${today()}.xlsx`.replace(/\s+/g,'_'));
+}
+function chart(id, cfg){ if (!window.Chart) return; if (S.charts[id]) S.charts[id].destroy(); const el = document.getElementById(id); if (el) S.charts[id] = new Chart(el, cfg); }
+if (window.Chart) { Chart.defaults.font.family = 'Manrope, system-ui, sans-serif'; Chart.defaults.color = '#647b97'; }
+function barCfg(labels, series, opts={}){
+  return { type: opts.type||'bar', data:{ labels, datasets: series.map(([label,data,color]) => ({label, data, backgroundColor:color, borderColor:color, borderRadius:6, tension:.3, fill:false, pointRadius:3})) },
+    options:{ maintainAspectRatio:false, indexAxis:opts.horizontal?'y':'x', plugins:{ legend:{display:series.length>1, position:'bottom', labels:{boxWidth:12, boxHeight:12, usePointStyle:true}} },
+      scales:{ x:{grid:{display:!!opts.horizontal, color:'#eef3f9'}, stacked:!!opts.stacked}, y:{beginAtZero:true, grid:{display:!opts.horizontal, color:'#eef3f9'}, stacked:!!opts.stacked} } } };
+}
+const seg = key => `<div class="seg">${['dia','semana','mes'].map(x=>`<button class="${S.gran[key]===x?'on':''}" onclick="S.gran.${key}='${x}';render()">${{dia:'Dia',semana:'Semana',mes:'Mês'}[x]}</button>`).join('')}</div>`;
+
+/* ===================== Cálculos ===================== */
+function mensal(R){
+  const ks = new Set(); R.forEach(r => { if (r.data_requisicao) ks.add(r.data_requisicao.slice(0,7)); if (r.data_abertura_os1) ks.add(r.data_abertura_os1.slice(0,7)); });
+  const lim = today().slice(0,7), keys = [...ks].filter(k=>k<=lim).sort();
+  const ent = serie(R,'data_requisicao','mes'), os1 = serie(R,'data_abertura_os1','mes');
+  const safra = groupBy(R.filter(r=>r.data_requisicao), r=>r.data_requisicao.slice(0,7));
+  return { keys, labels: keys.map(k=>glabel(k,'mes')), ent: keys.map(k=>ent.get(k)||0), os1: keys.map(k=>os1.get(k)||0),
+    trat: keys.map(k => (safra.get(k)||[]).filter(r=>r.data_abertura_os1).length),
+    tempo: keys.map(k => { const t = (safra.get(k)||[]).map(r=>r._diasG1).filter(v=>v!=null); return t.length ? avg(t) : null; }) };
+}
+const focoRows = R => R.filter(r => r._grupo==='Grupo 2' && r._osExec.length).sort((a,b)=>String(a._os.data_encerramento||a._os.field_data||'9').localeCompare(String(b._os.data_encerramento||b._os.field_data||'9')));
+const ocorrRows = R => R.filter(r => r._grupo==='Grupo 2' && !r._osExec.length && r._osEnc.length);
+function triagem(R){
+  const g1 = S.pessoas.filter(p=>p.grupo==='Grupo 1' && p.ativo!==false);
+  const carga = new Map(g1.map(p=>[p.nome, S.req.filter(r=>r._grupo==='Grupo 1' && r._resp===p.nome).length]));
+  return R.filter(r => r._grupo==='Grupo 1' && r._resp==='Grupo 1').sort((a,b)=>String(a.data_requisicao||'').localeCompare(String(b.data_requisicao||''))).map(r => {
+    let pool = g1.filter(p=>norm(p.categoria)===norm(r._cat));
+    if (!pool.length) pool = g1.filter(p=>norm(p.categoria)==='demais');
+    if (!pool.length) pool = g1;
+    if (!pool.length) return {...r, _sug:''};
+    const best = pool.reduce((a,b) => carga.get(b.nome) < carga.get(a.nome) ? b : a);
+    carga.set(best.nome, carga.get(best.nome)+1);
+    return {...r, _sug: best.nome};
+  });
+}
+const stEsc = r => { const s = norm(r.status); return s.includes('informac') ? 'Aguardando informações' : s.includes('executad') ? 'Executada' : s.includes('execucao') ? 'Aguardando execução' : (r.status || '—'); };
+const ladoGrupo = g => ['Grupo 1','Grupo 2'].includes(g) ? 'Time interno' : g === 'Escritório' ? 'Escritório' : '';
+function faseRot(r){ // fase atual, separando time interno × escritório
+  if (r._grupo === 'Escritório') return stEsc(r);
+  const s = norm(r.status), st = s.includes('aprova') ? 'Aguardando aprovação' : s.includes('informac') ? 'Aguardando informações' : s.includes('execucao') ? 'Aguardando execução' : (r.status||'—');
+  const quem = r._grupo === 'Grupo 1' && st !== 'Aguardando aprovação' ? 'Equipe (fora do G2)' : r._grupo;
+  return `${quem} · ${st}`;
+}
+function escAgg(E, keyFn){
+  const t = today();
+  return [...groupBy(E, keyFn)].map(([nome, a]) => ({ nome, qtd:a.length, exec:a.filter(r=>stEsc(r)==='Aguardando execução').length, info:a.filter(r=>stEsc(r)==='Aguardando informações').length, executada:a.filter(r=>stEsc(r)==='Executada').length, mais30:a.filter(r=>(r._diasAberto||0)>30).length,
+    venc:a.filter(r=>r._prazoFatal && r._prazoFatal<t).length, antiga: a.map(r=>r.data_requisicao).filter(Boolean).sort()[0]||'' })).sort((a,b)=>b.qtd-a.qtd);
+}
+const revFin = v => /finaliz|reprovad|cancelad/.test(norm(v.status)) || !!v.data_finalizacao;
+function revRows(){ const {de,ate} = S.filt; return S.rev.filter(v => (!de || (v.data_entrada && v.data_entrada>=de)) && (!ate || (v.data_entrada && v.data_entrada<=ate))); }
+function fasesDur(R){
+  const o = {ap:[], ex:[], fi:[], tot:[]}, push = (arr,a,b) => { if (a && b) { const d = daysDiff(a,b); if (d >= 0) arr.push(d); } };
+  R.forEach(r => { const a = r.data_ultima_aprovacao || r.data_abertura_os1;
+    push(o.ap, r.data_requisicao, a); push(o.ex, a, r.data_ultima_execucao); push(o.fi, r.data_ultima_execucao, r.data_finalizacao);
+    if (r._grupo==='Finalizada') push(o.tot, r.data_requisicao, r.data_finalizacao); });
+  const m = a => a.length ? fmtN(avg(a)) : '—';
+  return { ap:m(o.ap), ex:m(o.ex), fi:m(o.fi), tot:m(o.tot), n:o };
+}
+
+/* ===================== Colunas ===================== */
+const osC = (l, f) => col(l, '', r => r._os ? (f(r._os) ?? '') : '');
+const COLS = {
+  base: () => [col('Nº requisição','numero_requisicao'), col('Título','titulo'), col('Categoria','_cat'), col('Tipo de requisição','tipo_requisicao'),
+    col('Matrícula','_mat'), col('Processo (CNJ)','_proc'), col('Superintendência','_sup'), col('Processo ativo/encerrado','_sit'), col('Advogado interno (escritório)','_esc'),
+    colD('Data da requisição','data_requisicao'), col('Status','status'), col('Grupo','_grupo',null,r=>bG(r._grupo)), col('Responsável atual','_resp'),
+    col('OS 1','numero_os'), colD('Abertura OS 1','data_abertura_os1'), col('Resp. abertura OS 1','responsavel_abertura_os1'), colD('Prazo OS 1','prazo_os'),
+    col('Qtd. OS','qtd_os'), colD('Finalização','data_finalizacao'), col('Prazo fatal','',r=>fmt(r._prazoFatal)),
+    col('Situação da OS (SCAE/Field)','', osSit), osC('Status Field', o=>o.status_field)],
+  trat: () => [col('Nº requisição','numero_requisicao'), col('Título','titulo'), col('Categoria','_cat'), col('SUP','_sup'), colD('Data da requisição','data_requisicao'),
+    colD('Abertura OS 1','data_abertura_os1'), col('Resp. abertura OS 1','responsavel_abertura_os1'),
+    col('Dias até a OS 1','', r=>r._diasG1??'', r=>r._diasG1==null?'':B(r._diasG1+' d', r._diasG1<=2?'ok':r._diasG1<=5?'warn':'bad')),
+    col('Situação','', r=>r.data_abertura_os1?'Tratada':`Sem OS 1 há ${r.data_requisicao?daysDiff(r.data_requisicao,today()):'?'} d`, r=>r.data_abertura_os1?B('Tratada','ok'):B(`Sem OS 1 há ${r.data_requisicao?daysDiff(r.data_requisicao,today()):'?'} d`,'warn')),
+    col('Status atual','status')],
+  tri: () => [col('Nº requisição','numero_requisicao'), colD('Data da requisição','data_requisicao'), col('Dias aguardando','', r=>r.data_requisicao?daysDiff(r.data_requisicao,today()):''),
+    col('Título','titulo'), col('Categoria','_cat'), col('SUP','_sup'), col('Sugestão de destinatário','_sug',null,r=>B(r._sug,'navy'))],
+  foco: () => [col('Responsável G2 (SUP)','', r=>r._g2?.nome||'—'), col('SUP','_sup'),
+    col('No Projuris em nome de','', r=>r._g2Projuris||'', r=>r._div?B(r._g2Projuris,'warn'):esc(r._g2Projuris||'')), col('Nº requisição','numero_requisicao'), col('Matrícula','_mat'), col('Processo','_proc'),
+    osC('OS', o=>o.numero_os), osC('Tipo de OS', o=>o.tipo_os), osC('Abertura OS', o=>fmt(o.data_abertura)), osC('Encerramento', o=>fmt(o.data_encerramento||o.field_data)),
+    osC('Dias desde o encerramento', o=>{ const d=o.data_encerramento||o.field_data; return d?daysDiff(d,today()):''; }), osC('Ocorrência SCAE', o=>o.ocorrencia),
+    col('Status Field','', r=>r._os?.status_field||'', r=>r._os?.status_field?B(r._os.status_field):''),
+    col('Prazo Field','', r=>prazoField(r._os), r=>{ const p=prazoField(r._os); return p?B(p,/fora/i.test(p)?'bad':'ok'):''; }),
+    col('OSs executadas','', r=>`${r._osExec.length}/${r._osIds.length}`), col('Título','titulo')],
+  esc: () => [col('Nº requisição','numero_requisicao'), col('Título','titulo'), col('Status','', r=>stEsc(r), r=>B(stEsc(r), {'Aguardando execução':'mid','Aguardando informações':'warn','Executada':'ok'}[stEsc(r)]||'')), col('Advogado / responsável','_resp'), col('Escritório','_esc'), col('SUP','_sup'),
+    colD('Data da requisição','data_requisicao'), col('Dias em aberto','_diasAberto'), col('Dias na fase atual','_diasFase'), col('Prazo fatal','',r=>fmt(r._prazoFatal)),
+    col('Prazo fatal vencido','', r=>r._prazoFatal&&r._prazoFatal<today()?'Sim':'Não', r=>r._prazoFatal&&r._prazoFatal<today()?B('Vencido','bad'):'')],
+  agg: n => [col(n,'nome'), col('Total','qtd'), col('Aguardando execução','exec'), col('Aguardando informações','info'), col('Executada','executada'), col('+30 dias em aberto','mais30'), col('Prazo fatal vencido','venc', null, r=>r.venc?B(r.venc,'bad'):'0'), colD('Mais antiga','antiga')],
+  rev: () => [col('Nº requisição','numero_requisicao'), colD('Data da requisição','data_entrada'), col('Status','status'),
+    col('Situação','', r=>revFin(r)?'Concluída':'Em aberto', r=>revFin(r)?B('Concluída','ok'):B('Em aberto','warn')), colD('Abertura OS 1','data_abertura_os1'),
+    colD('Data da finalização','data_finalizacao'), col('Dias até a finalização','_diasFin'), col('Usuários responsáveis','usuarios_responsaveis'), col('Processo','processo')],
+  mov: () => [colD('Data','data_evento'), col('Nº requisição','chave'), col('Status anterior','status_anterior'), col('Status novo','status_novo'),
+    col('Responsável anterior','usuario_anterior'), col('Responsável novo','usuario_novo'), col('Agora com','', r=>ladoGrupo(r.grupo_novo)||r.grupo_novo||'')],
+  per: () => [col('Período','label'), col('Entrantes','ent'), col('OS 1 abertas','os1')],
+  mens: () => [col('Mês','mes'), col('Requisições entrantes','ent'), col('OS 1 abertas no mês','os1'), col('Entrantes já com OS 1','trat'), col('% com OS 1','pct'),
+    col('Tempo médio até a OS 1 (dias)','tempo'), col('Entrantes sem OS 1','pend')]
+};
+function mensRows(R){ const M = mensal(R); return M.labels.map((l,i)=>({ mes:l, ent:M.ent[i], os1:M.os1[i], trat:M.trat[i], pct:M.ent[i]?Math.round(M.trat[i]/M.ent[i]*100)+'%':'—', tempo:M.tempo[i]==null?'—':fmtN(M.tempo[i]), pend:M.ent[i]-M.trat[i] })); }
+
+/* ===================== Telas ===================== */
+const VIEWS = [['painel','Visão geral','grid'],['tratamento','Entrantes × Grupo 1','inbox'],['foco','Foco do dia · Grupo 2','target'],['escritorio','Escritórios','briefcase'],
+  ['fases','Fases & jornada','activity'],['revogacoes','Revogações','filex'],['base','Base mãe','db'],['cargas','Carregar bases','upload'],['config','Equipe & regras','users']];
+let VIEW = 'painel';
+function buildNav(){ document.getElementById('nav').innerHTML = VIEWS.map(([k,l,i]) => `<button class="tab ${k===VIEW?'on':''}" onclick="go('${k}')">${ic(i)}<span>${l}</span></button>`).join(''); }
+function go(v){ VIEW = v; buildNav(); render(); }
+function render(){
+  const f = {painel:vPainel, tratamento:vTratamento, foco:vFoco, escritorio:vEscritorio, fases:vFases, revogacoes:vRevogacoes, base:vBase, cargas:vCargas, config:vConfig}[VIEW];
+  Object.values(S.charts).forEach(c=>c.destroy()); S.charts = {}; S.tables = {};
+  try { f(); } catch (e) { console.error(e); V(`<div class="note bad">Erro ao montar a tela: ${esc(e.message)}</div>`); }
+}
+const semDados = () => S.req.length ? '' : `<div class="note">Ainda não há requisições na base. Abra <b>Carregar bases</b> e envie as planilhas do Projuris (Requisições e Processos) para começar.</div>`;
+
+function vPainel(){
+  const R = getReqs(), by = g => R.filter(r=>r._grupo===g).length;
+  const t = R.map(r=>r._diasG1).filter(v=>v!=null);
+  const abertos = R.filter(r=>!['Finalizada','Encerrada'].includes(r._grupo));
+  const venc = abertos.filter(r=>r._prazoFatal && r._prazoFatal<today()).length;
+  V(`${semDados()}<div class="kpis">${kpi('Requisições',R.length,periodoTxt(),'navy')}${kpi('Em aberto',abertos.length,'todas as fases')}${kpi('Aguardando aprovação',by('Grupo 1'),'com o Grupo 1')}${kpi('Pendentes Grupo 2',by('Grupo 2'),'aguardando execução')}${kpi('Foco do dia G2',focoRows(R).length,'OS já executada','warn')}${kpi('Com escritórios',by('Escritório'),'execução/informações')}${kpi('Tempo médio G1',t.length?fmtN(avg(t))+' d':'—','requisição → OS 1','ok')}${kpi('Prazo fatal vencido',venc,'em aberto','bad')}</div>
+  <div class="grid2"><div class="card">${cardH('Entrantes × abertura de OS 1','Últimos 12 meses, por mês.')}<div class="chart-box"><canvas id="cMens"></canvas></div></div>
+  <div class="card">${cardH('Onde estão as requisições em aberto','Pelo usuário responsável atual no Projuris.')}<div class="chart-box"><canvas id="cGrp"></canvas></div></div></div>`);
+  const M = mensal(R), s = Math.max(0, M.keys.length-12);
+  chart('cMens', barCfg(M.labels.slice(s), [['Entrantes',M.ent.slice(s),C.navy],['OS 1 abertas',M.os1.slice(s),C.pastel]]));
+  const gs = ['Grupo 1','Grupo 2','Escritório','Em requisição','Outros'];
+  chart('cGrp', {type:'doughnut', data:{labels:gs, datasets:[{data:gs.map(by), backgroundColor:[C.navy,C.mid,C.warn,C.pastel,C.gray], borderWidth:2, borderColor:'#fff'}]}, options:{maintainAspectRatio:false, cutout:'62%', plugins:{legend:{position:'right', labels:{usePointStyle:true}}}}});
+}
+
+function vTratamento(){
+  const R = getReqs(), g = S.gran.ent;
+  const ent = serie(R,'data_requisicao',g), os1 = serie(R,'data_abertura_os1',g);
+  const keys = [...new Set([...ent.keys(), ...os1.keys()])].filter(k=>k<=gk(today(),g)).sort().slice(-LIM[g]);
+  const per = keys.map(k=>({label:glabel(k,g), ent:ent.get(k)||0, os1:os1.get(k)||0})).reverse();
+  const det = R.filter(r=>r.data_requisicao).sort((a,b)=>b.data_requisicao.localeCompare(a.data_requisicao));
+  V(`${semDados()}<div class="card">${cardH('Requisições entrantes × OS 1 abertas pelo Grupo 1','Data da requisição × data da abertura da OS 1.', seg('ent'))}<div class="chart-box"><canvas id="cEnt"></canvas></div></div>
+  <div class="grid2">${tableBlock('per','Entrantes por '+{dia:'dia',semana:'semana',mes:'mês'}[g], COLS.per(), per, 'Entrantes_por_periodo')}${tableBlock('mens','Comparativo mensal', COLS.mens(), mensRows(R).reverse(), 'Comparativo_mensal')}</div>
+  ${tableBlock('tri','Triagem · aguardando aprovação no nome do time todo', COLS.tri(), triagem(R), 'Triagem_Grupo1', 'Sugestão pelo título: Acordo, Liminar e Revogação vão para a responsável da categoria; as demais são divididas pela menor carga.')}
+  ${tableBlock('trat','Requisição × tratamento pelo Grupo 1', COLS.trat(), det, 'Tratamento_Grupo1')}`);
+  chart('cEnt', barCfg(keys.map(k=>glabel(k,g)), [['Entrantes',keys.map(k=>ent.get(k)||0),C.navy],['OS 1 abertas',keys.map(k=>os1.get(k)||0),C.pastel]], {type: g==='dia'?'line':'bar'}));
+}
+
+function vFoco(){
+  const R = getReqs(), G2 = R.filter(r=>r._grupo==='Grupo 2'), F = focoRows(R), O = ocorrRows(R);
+  const semOS = G2.filter(r=>!r._osIds.length).length, naoLoc = G2.filter(r=>r._osIds.length && !r._osAll.length).length;
+  const porResp = [...groupBy(F, r=>r._g2?.nome||'Sem responsável')].sort((a,b)=>b[1].length-a[1].length);
+  V(`${semDados()}<div class="kpis">${kpi('Pendentes Grupo 2',G2.length,'aguardando execução','navy')}${kpi('Foco do dia',F.length,'OS executada','warn')}${kpi('Encerradas sem execução',O.length,'com ocorrência','bad')}${kpi('OS em aberto',G2.length-F.length-O.length-semOS-naoLoc,'aguardar execução')}${kpi('OS fora das bases',naoLoc,'não está no SCAE/Field enviado')}${kpi('Sem OS informada',semOS,'conferir Atributos')}${kpi('Em nome de outra ponto focal',G2.filter(r=>r._div).length,'SUP de outra responsável','warn')}</div>
+  <div class="card">${cardH('Foco do dia · Grupo 2','A responsável é a ponto focal da SUP do processo (quando o Projuris está no nome de outra pessoa, a coluna “No Projuris em nome de” fica destacada). Requisições em aguardando execução no nome do Grupo 2 cuja OS já está executada no SCAE ou finalizada no Field. Anexar o formulário de cumprimento e transferir ao escritório.')}
+  <div class="resp-cards">${porResp.map(([n,a])=>`<div class="rc"><div class="n">${esc(n)}</div><div class="q">${fmtI(a.length)}</div><div class="s">${esc(S.pessoas.find(p=>p.nome===n)?.superintendencias||'')}</div></div>`).join('') || '<div class="desc">Nenhuma requisição no foco agora.</div>'}</div></div>
+  ${tableBlock('foco','Requisições com OS executada', COLS.foco(), F, 'Foco_do_dia_Grupo2')}
+  ${tableBlock('ocor','OS encerradas sem execução', COLS.foco(), O, 'OS_encerradas_com_ocorrencia', 'OS encerrada no SCAE com ocorrência (cliente ausente, endereço não localizado…) ou encerrada no Field. Precisam de reabertura ou tratativa.')}`);
+}
+
+function vEscritorio(){
+  const E = getReqs().filter(r=>r._grupo==='Escritório'), t = today(), ST = ['Aguardando execução','Aguardando informações','Executada'];
+  const Ef = S.escSt ? E.filter(r=>stEsc(r)===S.escSt) : E;
+  const porAdv = escAgg(Ef, r=>r._resp||'Sem responsável'), porEsc = escAgg(Ef, r=>r._esc||'Sem escritório'), graf = escAgg(E, r=>r._esc||'Sem escritório').slice(0,12);
+  const n = st => E.filter(r=>stEsc(r)===st).length;
+  const segSt = `<div class="seg">${['',...ST].map(x=>`<button class="${S.escSt===x?'on':''}" onclick="S.escSt='${x}';render()">${x||'Todos'}</button>`).join('')}</div>`;
+  V(`${semDados()}<div class="kpis">${kpi('Com escritórios',E.length,'execução, informações e executadas','navy')}${kpi('Aguardando execução',n(ST[0]),'')}${kpi('Aguardando informações',n(ST[1]),'','warn')}${kpi('Executadas',n(ST[2]),'aguardando finalização','ok')}${kpi('+30 dias em aberto',E.filter(r=>(r._diasAberto||0)>30).length,'')}${kpi('Prazo fatal vencido',E.filter(r=>r._prazoFatal&&r._prazoFatal<t).length,'','bad')}</div>
+  <div class="card">${cardH('Pendentes por escritório e status','Escritório pelo campo Advogado Interno da base de Processos.')}<div class="chart-box" style="height:${Math.max(240, graf.length*36)}px"><canvas id="cEsc"></canvas></div></div>
+  <div class="card" style="padding:14px 22px">${cardH('Status nas tabelas abaixo','', segSt)}</div>
+  <div class="grid2">${tableBlock('aggE','Indicadores por escritório', COLS.agg('Escritório'), porEsc, 'Pendentes_por_escritorio')}${tableBlock('aggA','Indicadores por advogado', COLS.agg('Advogado / responsável'), porAdv, 'Pendentes_por_advogado')}</div>
+  ${tableBlock('escd','Requisições com os escritórios', COLS.esc(), Ef.sort((a,b)=>(b._diasAberto||0)-(a._diasAberto||0)), 'Requisicoes_escritorios')}`);
+  chart('cEsc', barCfg(graf.map(x=>x.nome.length>40?x.nome.slice(0,39)+'…':x.nome), [['Aguardando execução',graf.map(x=>x.exec),C.mid],['Aguardando informações',graf.map(x=>x.info),C.warn],['Executada',graf.map(x=>x.executada),C.ok]], {horizontal:true, stacked:true}));
+}
+
+function duracoesHist(R){ // tempo em cada etapa pelo histórico de cargas
+  const out = {};
+  R.forEach(r => { const ev = S.histBy.get(r.chave)||[]; ev.forEach((e,i) => {
+    const g = e.grupo_novo; if (!['Grupo 1','Grupo 2','Escritório'].includes(g)) return;
+    const o = out[g] = out[g] || {fech:[], abert:[]};
+    if (ev[i+1]) { if (ev[i+1].grupo_novo !== g) o.fech.push(daysDiff(e.data_evento, ev[i+1].data_evento)); }
+    else if (r._grupo === g) o.abert.push(daysDiff(e.data_evento, today()));
+  }); });
+  const nome = {'Grupo 1':'Time interno · Grupo 1 (triagem e abertura de OS)', 'Grupo 2':'Time interno · Grupo 2 (acompanhamento da OS)', 'Escritório':'Escritório (execução e finalização)'};
+  return ['Grupo 1','Grupo 2','Escritório'].map(g => { const o = out[g] || {fech:[], abert:[]}; return {etapa:nome[g], conc:o.fech.length, medio:o.fech.length?fmtN(avg(o.fech)):'—', aberto:o.abert.length, medioAb:o.abert.length?fmtN(avg(o.abert)):'—'}; });
+}
+function fasesLado(A){
+  return [...groupBy(A, faseRot)].map(([fase,a]) => { const d = a.map(r=>r._diasFase).filter(v=>v!=null), ab = a.map(r=>r._diasAberto).filter(v=>v!=null);
+    return {fase, qtd:a.length, dfase:d.length?fmtN(avg(d)):'—', daberto:ab.length?fmtN(avg(ab)):'—', mais30:d.filter(v=>v>30).length, antiga:a.map(r=>r.data_requisicao).filter(Boolean).sort()[0]||''}; }).sort((a,b)=>b.qtd-a.qtd);
+}
+function vFases(){
+  const R = getReqs(), set = new Set(R.map(r=>r.chave)), D = fasesDur(R);
+  const TI = R.filter(r=>['Grupo 1','Grupo 2'].includes(r._grupo)), ES = R.filter(r=>r._grupo==='Escritório');
+  const fTI = fasesLado(TI), fES = fasesLado(ES);
+  const md = a => { const d = a.map(r=>r._diasFase).filter(v=>v!=null); return d.length ? fmtN(avg(d))+' d' : '—'; };
+  const safra = [...groupBy(R.filter(r=>r.data_requisicao), r=>r.data_requisicao.slice(0,7))].sort((a,b)=>b[0].localeCompare(a[0])).map(([k,a]) => { const d = fasesDur(a); return {mes:glabel(k,'mes'), n:a.length, fin:a.filter(r=>r._grupo==='Finalizada').length, ap:d.ap, ex:d.ex, fi:d.fi, tot:d.tot}; });
+  const mov = S.hist.filter(h=>set.has(h.chave)).sort((a,b)=>String(b.data_evento).localeCompare(String(a.data_evento)) || b.id-a.id);
+  const cF = [col('Fase','fase'), col('Requisições','qtd'), col('Média de dias na fase','dfase'), col('Média de dias em aberto','daberto'), col('+30 dias na fase','mais30'), colD('Mais antiga','antiga')];
+  V(`${semDados()}<div class="kpis">${kpi('Time interno',TI.length,'em aberto · média na fase '+md(TI),'navy')}${kpi('Escritório',ES.length,'em aberto · média na fase '+md(ES),'warn')}${kpi('Time interno · aprovação',D.ap==='—'?'—':D.ap+' d','requisição → aprovação')}${kpi('Execução',D.ex==='—'?'—':D.ex+' d','aprovação → última execução')}${kpi('Escritório · finalização',D.fi==='—'?'—':D.fi+' d','execução → finalização')}${kpi('Ciclo completo',D.tot==='—'?'—':D.tot+' d','requisição → finalização','ok')}</div>
+  <div class="grid2"><div class="card">${cardH('Time interno · requisições por fase','Grupo 1 (aprovação e abertura de OS) e Grupo 2 (acompanhamento da OS).')}<div class="chart-box" style="height:${Math.max(200, fTI.length*40)}px"><canvas id="cFaseTI"></canvas></div></div>
+  <div class="card">${cardH('Escritório · requisições por fase','Aguardando execução, informações e executadas (aguardando finalização).')}<div class="chart-box" style="height:${Math.max(200, fES.length*40)}px"><canvas id="cFaseES"></canvas></div></div></div>
+  <div class="grid2">${tableBlock('fti','Fases do time interno', cF, fTI, 'Fases_time_interno')}${tableBlock('fes','Fases do escritório', cF, fES, 'Fases_escritorio')}</div>
+  ${tableBlock('etp','Tempo em cada etapa (pelo histórico de cargas)', [col('Etapa','etapa'), col('Passagens concluídas','conc'), col('Média (dias)','medio'), col('Ainda na etapa','aberto'), col('Média de quem ainda está (dias)','medioAb')], duracoesHist(R), 'Tempo_por_etapa', 'Mede quantos dias cada requisição ficou com o time interno e com o escritório. Ganha precisão a cada carga diária do Projuris.')}
+  <div class="card">${cardH('Jornada de uma requisição','Datas do Projuris + mudanças registradas a cada carga.')}<div class="tools"><input type="text" id="qReq" placeholder="Nº da requisição" onkeydown="if(event.key==='Enter')timeline()" style="flex:1;max-width:320px"><button class="btn sm" onclick="timeline()">Ver jornada</button></div><div id="tl"></div></div>
+  ${tableBlock('saf','Tempo médio por fase · por mês da requisição', [col('Mês','mes'), col('Requisições','n'), col('Finalizadas','fin'), col('Time interno · aprovação (d)','ap'), col('Execução (d)','ex'), col('Escritório · finalização (d)','fi'), col('Ciclo completo (d)','tot')], safra, 'Tempo_por_fase')}
+  ${tableBlock('mov','Movimentações registradas', COLS.mov(), mov, 'Movimentacoes', 'A cada carga diária, só as mudanças de status ou de responsável são gravadas.')}`);
+  const lab = a => a.map(x=>x.fase.length>42?x.fase.slice(0,41)+'…':x.fase);
+  chart('cFaseTI', barCfg(lab(fTI), [['Requisições',fTI.map(x=>x.qtd),C.navy]], {horizontal:true}));
+  chart('cFaseES', barCfg(lab(fES), [['Requisições',fES.map(x=>x.qtd),C.warn]], {horizontal:true}));
+}
+function timeline(){
+  const q = normOS(document.getElementById('qReq').value) || document.getElementById('qReq').value.trim(); const el = document.getElementById('tl');
+  const r = S.reqMap.get(q);
+  if (!r) { el.innerHTML = '<p class="desc">Requisição não encontrada.</p>'; return; }
+  const evs = [];
+  const m = (d,t,s) => d && evs.push({d, t, s, m:true});
+  m(r.data_requisicao,'Requisição registrada',r.requisitante||''); m(r.data_abertura_os1,'OS 1 aberta',[r.numero_os, r.responsavel_abertura_os1].filter(Boolean).join(' · '));
+  m(r.data_ultima_aprovacao,'Última aprovação',''); r._osAll.forEach(o=>m(o.data_encerramento||o.field_data,`OS ${o.numero_os} encerrada`,o.ocorrencia||o.status_field||''));
+  m(r.data_ultima_execucao,'Última execução',''); m(r.data_finalizacao,'Finalizada','');
+  (S.histBy.get(r.chave)||[]).forEach(e=>evs.push({d:e.data_evento, t:(ladoGrupo(e.grupo_novo)?ladoGrupo(e.grupo_novo)+' · ':'')+(e.status_novo||'—'), s:e.usuario_novo||'', m:false}));
+  evs.sort((a,b)=>a.d.localeCompare(b.d));
+  el.innerHTML = `<p style="margin:12px 0 0"><b>${esc(r.titulo||'')}</b><br><span class="desc">Matrícula ${esc(r._mat||'—')} · ${esc(r._sup||'')} · ${esc(r._proc||'')}</span></p>
+  <div class="timeline">${evs.map(e=>`<div class="ev ${e.m?'m':''}"><div class="d">${fmt(e.d)}</div><b>${esc(e.t)}</b>${e.s?`<div class="desc" style="margin:0">${esc(e.s)}</div>`:''}</div>`).join('')}</div>
+  <p class="desc">Agora: ${bG(r._grupo)} ${esc(faseRot(r))} · ${esc(r._resp)} · OS: ${esc(osSit(r))}${r._div?` · no Projuris em nome de ${esc(r._g2Projuris)}`:''}</p>`;
+}
+
+function vRevogacoes(){
+  const RV = revRows(), g = S.gran.rev, s = serie(RV,'data_entrada',g), f = S.filt;
+  const FN = S.rev.filter(v => v.data_finalizacao && (!f.de || v.data_finalizacao>=f.de) && (!f.ate || v.data_finalizacao<=f.ate)), sf = serie(FN,'data_finalizacao',g);
+  const keys = [...new Set([...s.keys(), ...sf.keys()])].filter(k=>k<=gk(today(),g)).sort().slice(-LIM[g]); const mesAtual = today().slice(0,7), rotMes = MESES[+mesAtual.slice(5)-1]+'/'+mesAtual.slice(2,4);
+  const per = keys.map(k=>({label:glabel(k,g), qtd:s.get(k)||0, fin:sf.get(k)||0})).reverse();
+  const porSt = [...groupBy(RV, v=>v.status||'(sem status)')].map(([k,a])=>({status:k, qtd:a.length})).sort((a,b)=>b.qtd-a.qtd);
+  const finMes = S.rev.filter(v=>(v.data_finalizacao||'').startsWith(mesAtual)), dias = RV.map(v=>v._diasFin).filter(v=>v!=null && v>=0);
+  V(`${!S.rev.length?`<div class="note">A base de Revogações ainda não foi carregada. Envie a planilha em <b>Carregar bases</b>.</div>`:''}${filtrosNaoPeriodo()?`<div class="note">A base de Revogações não tem SUP, escritório nem responsável: aqui só o filtro de período é aplicado.</div>`:''}
+  <div class="kpis">${kpi('Revogações',RV.length,periodoTxt(),'navy')}${kpi('Em aberto',RV.filter(v=>!revFin(v)).length,'','warn')}${kpi('Aguardando aprovação',RV.filter(v=>/aprova/.test(norm(v.status))).length,'')}${kpi('Finalizadas no mês',finMes.length,'finalizadas em '+rotMes,'ok')}${kpi('Entrantes no mês',RV.filter(v=>(v.data_entrada||'').startsWith(mesAtual)).length,rotMes)}${kpi('Finalizadas (total)',RV.filter(v=>/finaliz/.test(norm(v.status))).length,'')}${kpi('Tempo médio',dias.length?fmtN(avg(dias))+' d':'—','requisição → finalização')}</div>
+  <div class="card">${cardH('Revogações entrantes × finalizadas','Entrantes pela data da requisição; finalizadas pela data da finalização.', seg('rev'))}<div class="chart-box"><canvas id="cRev"></canvas></div></div>
+  <div class="grid2">${tableBlock('revp','Entrantes e finalizadas por '+{dia:'dia',semana:'semana',mes:'mês'}[g], [col('Período','label'), col('Entrantes','qtd'), col('Finalizadas','fin')], per, 'Revogacoes_por_periodo')}${tableBlock('revs','Status atual', [col('Status','status'), col('Requisições','qtd')], porSt, 'Revogacoes_por_status')}</div>
+  ${tableBlock('revf','Finalizadas no mês ('+rotMes+')', COLS.rev(), finMes.sort((a,b)=>String(b.data_finalizacao).localeCompare(String(a.data_finalizacao))), 'Revogacoes_finalizadas_no_mes')}
+  ${tableBlock('rev','Revogações', COLS.rev(), RV.sort((a,b)=>String(b.data_entrada||'').localeCompare(String(a.data_entrada||''))), 'Revogacoes')}`);
+  chart('cRev', barCfg(keys.map(k=>glabel(k,g)), [['Entrantes',keys.map(k=>s.get(k)||0),C.navy],['Finalizadas',keys.map(k=>sf.get(k)||0),C.ok]], {type:g==='dia'?'line':'bar'}));
+}
+
+function vBase(){
+  const R = getReqs().filter(r=>!S.baseGrupo || r._grupo===S.baseGrupo);
+  const gs = ['','Grupo 1','Grupo 2','Escritório','Em requisição','Finalizada','Encerrada','Outros'];
+  V(`${semDados()}<div class="card">${cardH('Base mãe','Requisições de obrigação de fazer (Decisões e [RIO]) cruzadas com a base de Processos (matrícula, SUP, CNJ, ativo/encerrado, escritório) e com as OSs do SCAE/Field.', `<div class="tools"><label class="desc" style="margin:0">Grupo</label><select onchange="S.baseGrupo=this.value;render()">${gs.map(g=>`<option value="${g}" ${g===S.baseGrupo?'selected':''}>${g||'Todos'}</option>`).join('')}</select></div>`)}</div>
+  ${tableBlock('base','Requisições', COLS.base(), R.sort((a,b)=>String(b.data_requisicao||'').localeCompare(String(a.data_requisicao||''))), 'Base_mae')}`);
+}
+
+async function carregaUso(){
+  const el = document.getElementById('uso'); if (!el || !sb) return;
+  const { data, error } = await sb.rpc('cob_uso');
+  const corpo = document.getElementById('usoCorpo'); if (!corpo) return;
+  if (error || !data) { corpo.textContent = 'Não foi possível consultar o uso (rode o schema.sql mais recente).'; return; }
+  const LIM = 500, pctUso = Math.min(100, data.total_mb / LIM * 100), cor = pctUso > 80 ? 'var(--bad)' : pctUso > 60 ? 'var(--warn)' : 'var(--ok)';
+  const cob = (data.tabelas||[]).filter(t => t.tabela.startsWith('cob_')), mb = cob.reduce((a,t)=>a+ +t.mb, 0), mortas = cob.reduce((a,t)=>a+ +t.mortas, 0);
+  corpo.outerHTML = `<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><b>${fmtN(data.total_mb)} MB de ${LIM} MB</b><span class="desc" style="margin:0">${fmtN(pctUso)}% · plataforma: ${fmtN(mb)} MB · resto: sistema do Supabase e outros</span></div>
+  <div style="height:10px;background:var(--baby2);border-radius:10px;overflow:hidden"><div style="height:100%;width:${pctUso}%;background:${cor}"></div></div>
+  ${mortas > 20000 ? `<div class="note" style="margin:12px 0 0">Há ${fmtI(mortas)} linhas antigas aguardando limpeza (sobras de importações). Rode o <b>manutencao_banco.sql</b> no SQL Editor para liberar o espaço.</div>` : ''}
+  <div class="tbl-wrap" style="margin-top:12px;max-height:260px"><table><thead><tr><th>Tabela</th><th>Tamanho</th><th>Linhas</th><th>Linhas antigas</th></tr></thead><tbody>${cob.map(t=>`<tr><td>${esc(t.tabela)}</td><td>${fmtN(t.mb)} MB</td><td>${fmtI(t.linhas)}</td><td>${fmtI(t.mortas)}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function vCargas(){
+  setTimeout(carregaUso, 0);
+  V(`<div class="card">${cardH('Carregar bases','Envie as planilhas como saem dos sistemas. A plataforma reconhece as colunas sozinha; você só confere e clica em Importar. Só o que mudou é gravado.')}
+  <div class="uploads"><div class="up" style="border-color:#f0c96a;background:#fffdf6"><h4>Modelo do PPT</h4><p>Apresentação da reunião semanal (.pptx). A plataforma troca só os gráficos, datas e percentuais. ${S.modelo?'<b>Modelo carregado.</b>':'Também pode ficar no site como <b>modelo.pptx</b>.'}</p><input type="file" accept=".pptx" onchange="definirModelo(this)"></div>${Object.entries(TIPOS).map(([k,t])=>`<div class="up"><h4>${esc(t.t)}</h4><p>${esc(t.d)}</p><label>Data de referência</label><br><input type="date" id="dt_${k}" value="${today()}"><input type="file" accept=".xlsx,.xls,.xlsm,.csv,.txt" onchange="onFile('${k}',this)">${infoBase(k)}</div>`).join('')}</div></div>
+  <div class="card" id="uso">${cardH('Uso do banco de dados','Plano gratuito do Supabase: 500 MB. Acima disso o projeto fica só leitura.')}<div class="desc" id="usoCorpo">Consultando…</div></div>
+  ${tableBlock('cargas','Histórico de cargas', [col('Data/hora','',r=>fmtDT(r.criado_em)), col('Base','',r=>TIPOS[r.tipo]?.t||r.tipo), col('Arquivo','arquivo'), colD('Referência','data_referencia'), col('Linhas','linhas'), col('Novos','novas'), col('Alterados','alteradas')], S.cargas, 'Historico_cargas')}`);
+}
+
+function vConfig(){
+  const rows = S.pessoas.slice().sort((a,b)=>(a.grupo+a.nome).localeCompare(b.grupo+b.nome));
+  V(`<div class="card">${cardH('Equipe e regras de distribuição', `<b>Grupo 1</b>: a categoria define a sugestão na triagem. <b>Grupo 2</b>: informe as superintendências como aparecem no Projuris. <b>Apelidos</b>: outras grafias do nome (o SCAE corta o nome em 30 caracteres). Pessoas inativas deixam de ser reconhecidas, inclusive no filtro de OSs abertas pelo time.`, `<div class="tools"><button class="btn light sm" onclick="addPessoa()">+ Pessoa</button><button class="btn sm" onclick="savePessoas()">Salvar</button></div>`)}
+  <div class="tbl-wrap"><table id="tPes"><thead><tr><th>Nome</th><th>Grupo</th><th>Superintendências (G2)</th><th>Categoria (G1)</th><th>Apelidos</th><th>Ativo</th></tr></thead><tbody>${rows.map(rowPessoa).join('')}</tbody></table></div></div>`);
+}
+function rowPessoa(p={}){
+  const sel = (f, opts, v) => `<select data-f="${f}">${opts.map(o=>`<option value="${o}" ${o===(v||'')?'selected':''}>${o||'—'}</option>`).join('')}</select>`;
+  return `<tr data-id="${p.id||''}"><td><input type="text" data-f="nome" value="${esc(p.nome||'')}"></td><td>${sel('grupo',['Grupo 1','Grupo 2','Equipe'],p.grupo||'Equipe')}</td>
+  <td><input type="text" data-f="superintendencias" value="${esc(p.superintendencias||'')}"></td><td>${sel('categoria',['','Acordo','Liminar','Revogação','Demais'],p.categoria)}</td>
+  <td><input type="text" data-f="apelidos" value="${esc(p.apelidos||'')}"></td><td><input type="checkbox" data-f="ativo" ${p.ativo!==false?'checked':''}></td></tr>`;
+}
+function addPessoa(){ document.querySelector('#tPes tbody').insertAdjacentHTML('beforeend', rowPessoa()); }
+async function savePessoas(){
+  const up = [], ins = [];
+  document.querySelectorAll('#tPes tbody tr').forEach(tr => {
+    const o = {}; tr.querySelectorAll('[data-f]').forEach(el => o[el.dataset.f] = el.type==='checkbox' ? el.checked : el.value.trim());
+    if (!o.nome) return;
+    if (tr.dataset.id) up.push({id:+tr.dataset.id, ...o}); else ins.push(o);
+  });
+  try {
+    if (up.length) { const {error} = await sb.from('cob_pessoas').upsert(up, {onConflict:'id'}); if (error) throw error; }
+    if (ins.length) { const {error} = await sb.from('cob_pessoas').insert(ins); if (error) throw error; }
+    await load(true); toast('✔ Equipe salva');
+  } catch (e) { toast('Erro ao salvar: '+erroTxt(e), true); }
+}
+
+/* ===================== Importação ===================== */
+const F_REQ = [
+  ['numero_requisicao','Nº da requisição',['numero requisicao','numero da requisicao','n requisicao']],
+  ['processo_id','Processo (código Projuris)',['processo']],
+  ['titulo','Título',['titulo']],
+  ['tipo_requisicao','Tipo de requisição',['tipo requisicao','tipo de requisicao']],
+  ['data_requisicao','Data da requisição',['data da requisicao']],
+  ['requisitante','Requisitante',['requisitante']],
+  ['executor','Executor',['executor']],
+  ['usuario_responsavel','Usuários responsáveis',['usuarios responsaveis','usuario responsavel']],
+  ['status','Status',['status']],
+  ['data_ultima_aprovacao','Data da última aprovação',['data da ultima aprovacao']],
+  ['matricula_os1','Matrícula O.S. 1',['matricula o s 1','matricula os 1']],
+  ['responsavel_abertura_os1','Responsável pela abertura da O.S. 1',['responsavel pela abertura da o s 1','responsavel pela abertura da os 1']],
+  ['data_abertura_os1','Data da abertura da O.S. 1',['data da abertura da o s 1','data da abertura da os 1']],
+  ['numero_os','Ordem de serviço 1',['ordem de servico 1']],
+  ['prazo_os','Prazo da O.S. 1',['prazo da o s 1','prazo da os 1']],
+  ['prazo_fatal','Prazo fatal',['prazo fatal']],
+  ['prazo_fatal_processo','Prazo fatal para apresentar no processo',['prazo fatal para apresentar no processo']],
+  ['data_ultima_execucao','Data da última execução',['data da ultima execucao']],
+  ['data_finalizacao','Data da finalização',['data da finalizacao']]];
+const F_PROC = [
+  ['numero_requisicao','Nº da requisição',['numero requisicao','numero da requisicao']],
+  ['processo','Nº atual do processo (CNJ)',['numero atual do processo','numero do processo']],
+  ['matricula','Matrícula',['matricula codigo do cliente sem digito multiplas matriculas separar por virgula','matricula']],
+  ['situacao_processo','Processo ativo/encerrado',['status','status do processo']],
+  ['superintendencia','Superintendência',['superintendencia adr','superintendencia']],
+  ['advogado_interno','Advogado interno (escritório)',['advogado interno']],
+  ['causa_raiz_1','Causa raiz 1',['causa raiz 1']],
+  ['causa_raiz_2','Causa raiz 2',['causa raiz 2']],
+  ['historico_atual','Histórico atual',['historico atual']]];
+const F_SCAE = [
+  ['numero_os','Nº do pedido (OS)',['n do pedido','no do pedido','numero do pedido','numero da os']],
+  ['matricula','Matrícula',['matricula']],
+  ['tipo_os','Descrição do serviço',['descricao do servico','tipo de os']],
+  ['data_abertura','Data do pedido',['data do pedido','data de abertura']],
+  ['data_encerramento','Data de encerramento',['data de encerramento','data encerramento']],
+  ['ocorrencia','Ocorrência de encerramento',['ocorrencia encerramento','ocorrencia de encerramento']],
+  ['departamento_atual','Departamento atual',['departamento atual']],
+  ['aberto_por','Usuário que abriu a OS',['usuario abriu o s','usuario abriu os','usuario emitiu o s']],
+  ['executado_por','Executado por',['executado por']],
+  ['teor','Teor (observações técnicas)',['observacoes tecnicas','observacoes']],
+  ['localidade','Localidade',['localidade']]];
+const F_FIELD = [
+  ['numero_os','Cód. protocolo origem (nº da OS)',['cod protocolo origem','protocolo origem']],
+  ['matricula','Matrícula',['matricula']],
+  ['status_field','Status da atividade',['status da atividade']],
+  ['field_data','Data',['data']],
+  ['field_inicio_sla','Início do SLA',['inicio do sla']],
+  ['field_fim_sla','Fim do SLA',['fim do sla']],
+  ['field_parecer','Parecer de campo',['parecer de campo']]];
+const F_REV = [
+  ['numero_requisicao','Nº da requisição',['numero requisicao','numero da requisicao']],
+  ['data_entrada','Data da requisição',['data da requisicao']],
+  ['data_abertura_os1','Data da abertura da O.S. 1',['data da abertura da o s 1']],
+  ['data_finalizacao','Data da finalização',['data da finalizacao']],
+  ['processo','Número do processo',['numero do processo']],
+  ['status','Status',['status']],
+  ['tipo_requisicao','Tipo de requisição',['tipo requisicao']],
+  ['usuarios_responsaveis','Usuários responsáveis',['usuarios responsaveis']]];
+const TIPOS = {
+  req:{t:'Projuris · Requisições', curto:'Requisições', d:'Obrigação de Fazer – Decisões e [RIO]. Carga diária: grava as mudanças de fase.', fields:F_REQ, req:['numero_requisicao','status']},
+  proc:{t:'Projuris · Processos', curto:'Processos', d:'Matrícula, SUP, nº CNJ, processo ativo/encerrado e escritório de cada requisição.', fields:F_PROC, req:['numero_requisicao']},
+  scae:{t:'SCAE (bloco 1 + 4)', curto:'SCAE', d:'OSs abertas pelo time: abertura, encerramento, ocorrência e serviço.', fields:F_SCAE, req:['numero_os']},
+  field:{t:'Field', curto:'Field', d:'Status da atividade e SLA de cada OS (liga ao SCAE pelo protocolo).', fields:F_FIELD, req:['numero_os']},
+  rev:{t:'Projuris · Revogações', curto:'Revogações', d:'Requisições de Revogação de Decisão. Alimenta o card de Revogações.', fields:F_REV, req:['numero_requisicao']}};
+const KEYS = {
+  req:['numero_requisicao','processo_id','titulo','tipo_requisicao','data_requisicao','requisitante','executor','usuario_responsavel','usuario_responsavel_raw','status','grupo','categoria',
+    'data_ultima_aprovacao','matricula_os1','responsavel_abertura_os1','data_abertura_os1','numero_os','prazo_os','os_lista','qtd_os','prazo_fatal','prazo_fatal_processo','data_ultima_execucao','data_finalizacao'],
+  proc:['processo','matricula','situacao_processo','superintendencia','advogado_interno','causa_raiz_1','causa_raiz_2','historico_atual'],
+  scae:['numero_os','matricula','tipo_os','teor','aberto_por','executado_por','localidade','departamento_atual','ocorrencia','data_abertura','data_encerramento','data_execucao'],
+  field:['numero_os','matricula','status_field','field_data','field_inicio_sla','field_fim_sla','field_parecer'],
+  rev:['numero_requisicao','processo','data_entrada','data_abertura_os1','data_finalizacao','status','tipo_requisicao','usuarios_responsaveis']};
+const DATES = new Set(['data_requisicao','data_ultima_aprovacao','data_abertura_os1','prazo_os','prazo_fatal','prazo_fatal_processo','data_ultima_execucao','data_finalizacao',
+  'historico_atual','data_abertura','data_encerramento','field_data','field_inicio_sla','field_fim_sla','data_entrada']);
+
+function fixRef(ws){
+  // algumas exportações declaram ~1 milhão de linhas vazias; recalcula a área usada pelas células reais
+  let mr = -1, mc = -1;
+  for (const k in ws) { if (k[0]==='!') continue; const c = XLSX.utils.decode_cell(k); if (c.r > mr) mr = c.r; if (c.c > mc) mc = c.c; }
+  if (mr < 0) return false;
+  ws['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:mr,c:mc}});
+  return true;
+}
+function parseWs(ws, fields){
+  if (!fixRef(ws)) return null;
+  const a = XLSX.utils.sheet_to_json(ws, {header:1, raw:true, defval:'', blankrows:false});
+  let hi = a.findIndex(r => r.filter(c=>String(c).trim()!=='').length >= 3); if (hi < 0) hi = 0;
+  const seen = {};
+  const headers = (a[hi]||[]).map((h,i) => { let x = String(h).trim() || `Coluna ${i+1}`; if (seen[x]) x += ` (${++seen[x]})`; else seen[x] = 1; return x; });
+  const rows = a.slice(hi+1).filter(r=>r.some(c=>String(c).trim()!=='')).map(r => { const o = {}; headers.forEach((h,i)=>o[h]=r[i]); return o; });
+  return {headers, rows, score: fields ? Object.keys(detect(headers, fields)).length : 0};
+}
+async function readSheet(file, fields){
+  const buf = new Uint8Array(await file.arrayBuffer());
+  const binario = (buf[0]===0x50 && buf[1]===0x4B) || (buf[0]===0xD0 && buf[1]===0xCF);
+  let wb;
+  if (binario) wb = XLSX.read(buf, {type:'array'});
+  else {
+    let txt; try { txt = new TextDecoder('utf-8', {fatal:true}).decode(buf); } catch (e) { txt = new TextDecoder('windows-1252').decode(buf); }
+    wb = XLSX.read(txt.replace(/^\uFEFF/,''), {type:'string', raw:true});
+  }
+  // lê todas as abas e escolhe a que tem mais colunas reconhecidas (desempate: mais linhas)
+  const sheets = [];
+  wb.SheetNames.forEach(n => { const d = parseWs(wb.Sheets[n], fields); if (d) sheets.push({name:n, ...d}); });
+  if (!sheets.length) return {headers:[], rows:[], sheets:[], sheet:''};
+  const best = sheets.reduce((a,b) => (b.score > a.score || (b.score===a.score && b.rows.length > a.rows.length)) ? b : a);
+  return {headers:best.headers, rows:best.rows, sheets, sheet:best.name};
+}
+function detect(headers, fields){
+  const nh = headers.map(h=>norm(h)), used = new Set(), map = {};
+  const score = (h,s) => h===s ? 3 : (' '+h+' ').startsWith(' '+s+' ') ? 2 : (' '+h+' ').includes(' '+s+' ') ? 1 : 0;
+  [3,2,1].forEach(lv => fields.forEach(([k,,syns]) => {
+    if (map[k]) return;
+    for (const s of syns) { const i = nh.findIndex((h,j)=>!used.has(j) && score(h,s)===lv); if (i>=0) { map[k] = headers[i]; used.add(i); return; } }
+  }));
+  return map;
+}
+/* ===================== Apagar base importada ===================== */
+const osDoScae = o => !!(o.aberto_por || o.data_abertura || o.tipo_os), osDoField = o => !!(o.status_field || o.field_data || o.field_fim_sla);
+function qtdBase(k){ return {req:S.req.length, proc:S.proc.length, scae:S.os.filter(osDoScae).length, field:S.os.filter(osDoField).length, rev:S.rev.length}[k] || 0; }
+function infoBase(k){
+  const n = qtdBase(k), c = S.cargas.find(x=>x.tipo===k);
+  return `<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">
+    <span class="desc" style="margin:0">${n ? `<b>${fmtI(n)}</b> registros${c?` · última carga ${fmt(c.data_referencia)}`:''}` : 'Base vazia'}</span>
+    ${n ? `<button class="btn sm light" style="color:var(--bad);border-color:#f3c7c1" onclick="pedirApagar('${k}')">Apagar base</button>` : ''}</div>`;
+}
+const AVISO_APAGAR = {
+  req:'Apaga todas as requisições. As fotos semanais do PPT continuam guardadas.',
+  proc:'Apaga a base de Processos. As requisições ficam sem SUP, matrícula, CNJ e escritório até uma nova carga.',
+  scae:'Apaga todas as OSs do SCAE e, junto, as informações do Field (o Field só complementa o SCAE).',
+  field:'Apaga só o status e o SLA do Field. As OSs do SCAE continuam.',
+  rev:'Apaga toda a base de Revogações.'
+};
+function pedirApagar(k){
+  modal(`<h3 style="margin:0 0 6px;color:var(--bad)">Apagar ${esc(TIPOS[k].t)}?</h3>
+  <div class="desc">${esc(AVISO_APAGAR[k])} São <b>${fmtI(qtdBase(k))}</b> registros, apagados também no Supabase. <b>Não dá para desfazer</b> — para voltar, é preciso importar a planilha de novo.</div>
+  ${k==='req' ? `<label style="display:flex;gap:8px;align-items:flex-start;margin:14px 0 0;font-size:13px"><input type="checkbox" id="apHist"> <span>Apagar também o histórico de fases (as mudanças registradas dia a dia). Deixe desmarcado para manter o histórico.</span></label>` : ''}
+  <label style="display:block;font-size:12px;font-weight:700;color:var(--muted);margin:16px 0 6px">Para confirmar, digite APAGAR</label>
+  <input type="text" id="apConf" autocomplete="off" style="width:100%" oninput="document.getElementById('apOk').disabled = this.value.trim().toUpperCase() !== 'APAGAR'">
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px"><button class="btn light" onclick="closeModal()">Cancelar</button><button class="btn" id="apOk" style="background:var(--bad)" disabled onclick="apagarBase('${k}')">Apagar base</button></div>`);
+  setTimeout(()=>document.getElementById('apConf')?.focus(), 50);
+}
+async function apagarBase(k){
+  const btn = document.getElementById('apOk'), hist = !!document.getElementById('apHist')?.checked;
+  btn.disabled = true; btn.textContent = 'Apagando…';
+  try {
+    const { data, error } = await sb.rpc('cob_apagar_base', { p_tipo:k, p_historico:hist });
+    if (error) throw error;
+    closeModal(); toast('Atualizando a plataforma…', false, true); await load(true);
+    toast(`✔ ${TIPOS[k].t}: ${fmtI(data?.linhas||0)} registros apagados${k==='req' && hist ? ', com o histórico de fases' : ''}.`);
+  } catch (e) { console.error(e); btn.disabled = false; btn.textContent = 'Apagar base'; toast('Erro ao apagar: ' + erroTxt(e) + (/cob_apagar_base/.test(erroTxt(e)) ? ' — rode o schema.sql mais recente.' : ''), true); }
+}
+async function onFile(tipo, input){
+  const file = input.files[0]; if (!file) return;
+  toast('Lendo planilha… (bases grandes podem levar alguns segundos)', false, true);
+  try { await new Promise(r=>setTimeout(r,30)); const r = await readSheet(file, TIPOS[tipo].fields); hideToast(); S.sheets = r.sheets; openMapping(tipo, file.name, r.headers, r.rows, r.sheet); }
+  catch (e) { console.error(e); toast('Erro ao ler o arquivo: '+e.message, true); }
+  input.value = '';
+}
+function trocarAba(nome){ const P = S.pending, sh = (S.sheets||[]).find(x=>x.name===nome); if (!P || !sh) return; openMapping(P.tipo, P.fname, sh.headers, sh.rows, sh.name); }
+function openMapping(tipo, fname, headers, rows, aba=''){
+  const T = TIPOS[tipo], saved = S.config['map_'+tipo] || {}, auto = detect(headers, T.fields), map = {};
+  // vínculo salvo só vale se a coluna existir nesta planilha; senão usa a detecção automática
+  T.fields.forEach(([k]) => map[k] = saved[k] && headers.includes(saved[k]) ? saved[k] : (auto[k]||''));
+  S.pending = {tipo, fname, headers, rows, map};
+  const abas = (S.sheets||[]).length > 1 ? `<div style="display:flex;gap:8px;align-items:center;margin-top:12px;flex-wrap:wrap"><label class="desc" style="margin:0;font-weight:700">Aba da planilha</label><select onchange="trocarAba(this.value)">${S.sheets.map(x=>`<option value="${esc(x.name)}" ${x.name===aba?'selected':''}>${esc(x.name)} · ${fmtI(x.rows.length)} linhas · ${x.score} colunas reconhecidas</option>`).join('')}</select></div>` : '';
+  const extra = tipo==='scae' ? `<label style="display:flex;gap:8px;align-items:center;margin:4px 0 12px;font-size:13px"><input type="checkbox" id="mpTeam" checked onchange="mapPreview()"> Importar apenas OSs abertas pelo time (pessoas ativas em Equipe & regras)</label>` : '';
+  modal(`<h3 style="margin:0 0 4px">Conferir colunas · ${esc(T.t)}</h3><div class="desc">${esc(fname)}${aba?` · aba “${esc(aba)}”`:''} · ${fmtI(rows.length)} linhas · ${headers.length} colunas na planilha. Confira o vínculo de cada informação — ele fica salvo para as próximas cargas.</div>${abas}
+  <div class="map-grid">${T.fields.map(([k,l])=>`<div><label>${esc(l)}${T.req.includes(k)?' *':''}</label><select data-k="${k}" onchange="S.pending.map[this.dataset.k]=this.value;mapPreview()"><option value="">— não usar —</option>${headers.map(h=>`<option value="${esc(h)}">${esc(h)}</option>`).join('')}</select></div>`).join('')}</div>
+  ${extra}<div class="note" id="mpPrev"></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn light" onclick="closeModal()">Cancelar</button><button class="btn" id="mpOk" onclick="confirmMapping()">Importar</button></div>`);
+  document.querySelectorAll('#modal select[data-k]').forEach(s => s.value = map[s.dataset.k] || '');
+  mapPreview();
+}
+function mapPreview(){
+  const P = S.pending, T = TIPOS[P.tipo];
+  const miss = T.req.filter(k=>!P.map[k]); let ok = !miss.length, msg;
+  if (!ok) msg = 'Obrigatório: ' + miss.map(k=>T.fields.find(f=>f[0]===k)[1]).join(', ');
+  else {
+    const recs = buildRecs(P); msg = `${fmtI(recs.length)} registro(s) serão processados.`;
+    if (P.tipo==='scae') { const tot = P.rows.length; if (document.getElementById('mpTeam')?.checked) msg += ` ${fmtI(tot-recs.length)} OS(s) de pessoas fora da equipe ficam de fora.`; if (!recs.length) msg += ' Nenhuma OS reconhecida — confira a coluna do usuário ou os apelidos em Equipe & regras.'; }
+    if (P.tipo==='req') msg += ` OS 2 a 5 detectadas: ${osExtras(P.headers).length}.`;
+  }
+  document.getElementById('mpPrev').textContent = msg; document.getElementById('mpOk').disabled = !ok;
+}
+const osExtras = headers => headers.filter(h => /^ordem de servico [2-9]$/.test(norm(h)));
+function buildRecs(P){
+  const g = (o,k) => { const h = P.map[k]; if (!h) return null; const v = o[h]; return v==null || String(v).trim()==='' ? null : v; };
+  const val = (o,k) => { const v = g(o,k); if (v==null) return null; return DATES.has(k) ? parseDate(v) : cleanTxt(v); };
+  const pick = (o, ks) => { const r = {}; ks.forEach(k => r[k] = val(o,k)); return r; };
+  const out = new Map(), F = TIPOS[P.tipo].fields.map(f=>f[0]);
+  if (P.tipo==='req') {
+    const extras = osExtras(P.headers);
+    P.rows.forEach(o => {
+      const r = pick(o, F.filter(k=>k!=='usuario_responsavel'));
+      if (!r.numero_requisicao) return;
+      r.chave = r.numero_requisicao;
+      r.usuario_responsavel_raw = val(o,'usuario_responsavel');
+      if (!normOS(r.numero_os)) r.numero_os = null;
+      const ids = [r.numero_os, ...extras.map(h=>o[h])].map(normOS).filter(Boolean);
+      r.os_lista = ids.length ? [...new Set(ids)].join(';') : null;
+      r.qtd_os = ids.length ? new Set(ids).size : 0;
+      const ms = matchPessoas(r.usuario_responsavel_raw);
+      r.grupo = derivaGrupo(r, ms); r.usuario_responsavel = respDisplay(r, ms, r.grupo); r.categoria = categoria(r.titulo);
+      out.set(r.chave, r);
+    });
+  } else if (P.tipo==='proc' || P.tipo==='rev') {
+    P.rows.forEach(o => { const r = pick(o, F); if (!r.numero_requisicao) return; r.chave = r.numero_requisicao; if (P.tipo==='proc') delete r.numero_requisicao; out.set(r.chave, r); });
+  } else if (P.tipo==='scae') {
+    const team = document.getElementById('mpTeam')?.checked !== false;
+    P.rows.forEach(o => {
+      const r = pick(o, F); const id = normOS(r.numero_os); if (!id) return;
+      if (team && !matchPessoas(r.aberto_por).length) return;
+      r.os_id = id; r.data_execucao = /execut/.test(norm(r.ocorrencia)) ? r.data_encerramento : null;
+      out.set(id, r);
+    });
+  } else {
+    P.rows.forEach(o => { const r = pick(o, F); const id = normOS(r.numero_os); if (!id) return; r.os_id = id; out.set(id, r); });
+  }
+  return [...out.values()];
+}
+function diff(oldMap, recs, key, keys){
+  const up = [], changed = []; let novas = 0, alt = 0, ig = 0;
+  recs.forEach(r => { const o = oldMap.get(r[key]);
+    if (!o) { novas++; up.push(r); changed.push([r,null]); }
+    else if (keys.some(k => String(o[k]??'') !== String(r[k]??''))) { alt++; up.push(r); changed.push([r,o]); }
+    else ig++; });
+  return {up, changed, novas, alteradas:alt, iguais:ig};
+}
+async function confirmMapping(){
+  const P = S.pending, btn = document.getElementById('mpOk');
+  btn.disabled = true; btn.textContent = 'Importando…';
+  const recs = buildRecs(P), dataRef = document.getElementById('dt_'+P.tipo)?.value || today(), now = new Date().toISOString();
+  try {
+    await sb.from('cob_config').upsert({chave:'map_'+P.tipo, valor:P.map, atualizado_em:now}, {onConflict:'chave'});
+    let res;
+    if (P.tipo==='req') {
+      res = diff(new Map(S.req.map(r=>[r.chave,r])), recs, 'chave', KEYS.req);
+      const fechado = g => g==='Finalizada' || g==='Encerrada';
+      const hist = res.changed.filter(([r,o]) => o ? ['status','usuario_responsavel','grupo'].some(k=>String(o[k]??'')!==String(r[k]??'')) : !fechado(r.grupo))
+        .map(([r,o]) => ({chave:r.chave, data_evento:dataRef, status_anterior:o?.status??null, status_novo:r.status, usuario_anterior:o?.usuario_responsavel??null, usuario_novo:r.usuario_responsavel, grupo_anterior:o?.grupo??null, grupo_novo:r.grupo}));
+      const carga = await novaCarga(P.tipo, P.fname, dataRef, recs.length, res.novas, res.alteradas);
+      // histórico antes das requisições: se a carga cair no meio, repetir não perde nem duplica mudanças
+      hist.forEach(h => h.carga_id = carga.id);
+      await batches('cob_historico', hist, 'chave,data_evento', 'upsert');
+      res.up.forEach(r => r.atualizado_em = now);
+      await batches('cob_requisicoes', res.up, 'chave', 'upsert');
+    } else {
+      const cfg = { proc:['cob_processos','chave',S.proc], rev:['cob_revogacoes','chave',S.rev], scae:['cob_os','os_id',S.os], field:['cob_os','os_id',S.os] }[P.tipo];
+      res = diff(new Map(cfg[2].map(r=>[r[cfg[1]], r])), recs, cfg[1], KEYS[P.tipo]);
+      await novaCarga(P.tipo, P.fname, dataRef, recs.length, res.novas, res.alteradas);
+      res.up.forEach(r => r.atualizado_em = now);
+      await batches(cfg[0], res.up, cfg[1], 'upsert');
+    }
+    closeModal(); toast('Atualizando a plataforma…', false, true); await load(true);
+    if (P.tipo==='req' || P.tipo==='proc') await salvarSnap(P.tipo==='req' ? dataRef : refDate());
+    toast(`✔ ${TIPOS[P.tipo].t}: ${fmtI(res.novas)} novos, ${fmtI(res.alteradas)} alterados, ${fmtI(res.iguais)} sem mudança.`);
+  } catch (e) { console.error(e); btn.disabled = false; btn.textContent = 'Importar'; toast('Erro na importação: '+erroTxt(e), true); }
+}
+
+/* ===================== Exportações ===================== */
+function exportTudo(){
+  const R = getReqs(), E = R.filter(r=>r._grupo==='Escritório'), set = new Set(R.map(r=>r.chave));
+  toast('Gerando planilha…', false, true);
+  setTimeout(() => {
+    xlsxDownload([
+      {name:'Base mãe', rows:toObjs(COLS.base(), R)},
+      {name:'Comparativo mensal', rows:toObjs(COLS.mens(), mensRows(R))},
+      {name:'Tratamento Grupo 1', rows:toObjs(COLS.trat(), R.filter(r=>r.data_requisicao))},
+      {name:'Triagem Grupo 1', rows:toObjs(COLS.tri(), triagem(R))},
+      {name:'Foco do dia G2', rows:toObjs(COLS.foco(), focoRows(R))},
+      {name:'OS encerradas sem execução', rows:toObjs(COLS.foco(), ocorrRows(R))},
+      {name:'Escritórios', rows:toObjs(COLS.agg('Escritório'), escAgg(E, r=>r._esc||'Sem escritório'))},
+      {name:'Advogados', rows:toObjs(COLS.agg('Advogado / responsável'), escAgg(E, r=>r._resp||'Sem responsável'))},
+      {name:'Requisições com escritórios', rows:toObjs(COLS.esc(), E)},
+      {name:'Revogações', rows:toObjs(COLS.rev(), revRows())},
+      {name:'Movimentações', rows:toObjs(COLS.mov(), S.hist.filter(h=>set.has(h.chave)))}
+    ], 'Cumprimento_Obrigacoes');
+    hideToast();
+  }, 50);
+}
+/* ===================== PPT da reunião semanal (preenche o modelo) ===================== */
+const MESES_UP = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+const FF = 'Aptos, Calibri, Arial, sans-serif';
+const PXI = 200, PT = PXI/72*1.3, CINZA = '#595959';
+const addDays = (d,n) => { const x = new Date(d+'T12:00:00'); x.setDate(x.getDate()+n); return isoD(x); };
+const mesAnt = ym => { const [y,m] = ym.split('-').map(Number); return m===1 ? `${y-1}-12` : `${y}-${pad(m-1)}`; };
+const nomeMes = ym => MESES_UP[+ym.slice(5,7)-1];
+const ddmm = d => fmt(d).slice(0,5);
+const soma = a => a.reduce((x,e)=>x+e[1], 0);
+const pct = (a,b) => b ? (a-b)/b*100 : null;
+const fmtPct = v => v==null ? '—' : Math.abs(v).toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}) + '%';
+const sinal = v => v==null ? '' : (v >= 0 ? '+' : '-');
+
+function escCurto(n){ return String(n||'Sem escritório').split(/ - |,| advogad| escrit| sociedade/i)[0].trim() || 'Sem escritório'; }
+function snapAtual(){
+  const esc = {}, int = {dec:{exec:0,info:0}, rio:{exec:0,info:0}};
+  S.req.forEach(r => {
+    const st = norm(r.status), s = st.includes('informac') ? 'info' : st.includes('execucao') ? 'exec' : null;
+    if (!s || norm(r._sit) !== 'ativos') return;
+    if (r._team) int[/\brio\b/.test(norm(r.tipo_requisicao)) ? 'rio' : 'dec'][s]++;
+    else { const n = escCurto(r._esc); (esc[n] = esc[n] || {exec:0,info:0})[s]++; }
+  });
+  return {esc, int};
+}
+const totEsc = (v,n) => v && v.esc && v.esc[n] ? (v.esc[n].exec||0) + (v.esc[n].info||0) : 0;
+const totInt = (v,k) => v && v.int && v.int[k] ? (v.int[k].exec||0) + (v.int[k].info||0) : 0;
+function refDate(){ const c = S.cargas.find(x=>x.tipo==='req'); return (c && c.data_referencia) || today(); }
+function snapAntes(lim){ return (S.snaps||[]).filter(s => s.data <= lim).sort((a,b)=>b.data.localeCompare(a.data))[0] || null; }
+async function salvarSnap(data){
+  if (!S.req.length || !sb) return;
+  const valor = snapAtual();
+  try { const {error} = await sb.from('cob_snapshots').upsert({data, valor, atualizado_em:new Date().toISOString()}, {onConflict:'data'}); if (error) throw error;
+    S.snaps = (S.snaps||[]).filter(s=>s.data!==data).concat([{data, valor}]); } catch (e) { console.warn('foto semanal não salva', e); }
+}
+function dadosModelo(){
+  const ref = refDate(), ini = addDays(ref,-7), mes = ref.slice(0,7), ant = mesAnt(mes);
+  const dias = (rows, f) => { const m = serie(rows.filter(r=>r[f] && r[f]>=ini && r[f]<=ref), f, 'dia'); return [...m.keys()].sort().map(k=>[k, m.get(k)]); };
+  const noMes = (rows, f, ym) => rows.filter(r => (r[f]||'').startsWith(ym)).length;
+  const cur = {data:ref, valor:snapAtual()};
+  const prev = snapAntes(addDays(ref,-7)), prev2 = prev ? snapAntes(addDays(prev.data,-7)) : null;
+  const firmas = Object.keys(cur.valor.esc).sort((a,b)=>totEsc(cur.valor,b)-totEsc(cur.valor,a)).slice(0,4).sort((a,b)=>a.localeCompare(b));
+  return { ref, mes, ant, cur, prev, prev2, firmas,
+    ent: dias(S.req,'data_requisicao'), os1: dias(S.req,'data_abertura_os1'),
+    entMes: [noMes(S.req,'data_requisicao',ant), noMes(S.req,'data_requisicao',mes)],
+    osMes: [noMes(S.req,'data_abertura_os1',ant), noMes(S.req,'data_abertura_os1',mes)],
+    valores: S.req.filter(r => (r.data_requisicao||'').startsWith(mes) && /valor/.test(norm(r.titulo))).length,
+    rev: dias(S.rev,'data_entrada'), revAprov: S.rev.filter(v=>/aprova/.test(norm(v.status))).length,
+    revMes: [noMes(S.rev,'data_entrada',ant), noMes(S.rev,'data_entrada',mes)],
+    revFin: S.rev.filter(v => (v.data_finalizacao||'').startsWith(mes)).length };
+}
+
+/* ---- desenho dos gráficos no estilo do modelo ---- */
+function offCanvas(w,h){ const c = document.createElement('canvas'); c.width = Math.round(w*PXI); c.height = Math.round(h*PXI); c.style.cssText = `position:fixed;left:-99999px;top:0;width:${c.width}px;height:${c.height}px`; document.body.appendChild(c); return c; }
+const PL_BG = {id:'bgf', beforeDraw(ch, a, o){ if (!o || !o.color) return; const x = ch.ctx; x.save(); x.fillStyle = o.color; x.fillRect(0,0,ch.width,ch.height);
+  if (o.border) { x.strokeStyle = '#D9D9D9'; x.lineWidth = 3; x.strokeRect(1.5,1.5,ch.width-3,ch.height-3); } x.restore(); }};
+const PL_TTL = {id:'ttl', afterDraw(ch, a, o){ if (!o || !o.parts) return; const x = ch.ctx; x.save(); x.textBaseline = 'top'; x.fillStyle = o.color || CINZA;
+  const fonts = o.parts.map(p => `${p[1]?'700 ':''}${o.size}px ${FF}`); let w = 0;
+  o.parts.forEach((p,i) => { x.font = fonts[i]; w += x.measureText(p[0]).width; });
+  let cx = (ch.width - w)/2; o.parts.forEach((p,i) => { x.font = fonts[i]; x.fillText(p[0], cx, o.y); cx += x.measureText(p[0]).width; }); x.restore(); }};
+const PL_VALS = {id:'vals', afterDatasetsDraw(ch, a, o){ if (!o || !o.size) return; const x = ch.ctx;
+  ch.data.datasets.forEach((ds,i) => ch.getDatasetMeta(i).data.forEach((el,j) => { const v = ds.data[j]; if (v == null) return;
+    x.save(); x.textAlign = 'center';
+    if (o.inside) { x.fillStyle = '#fff'; x.textBaseline = 'middle'; x.font = `${o.size*1.3}px ${FF}`; x.fillText(fmtI(v), el.x, (el.y + el.base)/2); }
+    else { x.fillStyle = '#404040'; x.textBaseline = 'bottom'; x.font = `${o.size}px ${FF}`; x.fillText(fmtI(v), el.x, el.y - o.size*0.35); }
+    x.restore(); })); }};
+function renderChart(w, h, cfg){
+  const c = offCanvas(w, h);
+  cfg.options = Object.assign({responsive:false, maintainAspectRatio:false, animation:false, devicePixelRatio:1, events:[]}, cfg.options || {});
+  cfg.plugins = [PL_BG, PL_TTL, PL_VALS];
+  const ch = new Chart(c, cfg); const url = c.toDataURL('image/png'); ch.destroy(); c.remove(); return url;
+}
+function chartImg(w, h, o){
+  const lbl = o.lbl == null ? 13 : o.lbl, xs = o.xs || 12, tt = o.title, linha = o.type === 'line';
+  const padTop = (tt ? tt.size*PT*1.9 : 0) + (lbl ? lbl*PT*1.5 : 10);
+  return renderChart(w, h, { type: o.type || 'bar',
+    data: { labels: o.labels, datasets: o.series.map((s,i) => ({ label:s[0], data:s[1], backgroundColor:o.colors[i], borderColor:o.colors[i],
+      borderWidth: linha ? 7 : 0, pointRadius: linha ? 11 : 0, pointBackgroundColor:o.colors[i], tension:0, barPercentage:o.barPct || 0.5, categoryPercentage:o.catPct || 0.8 })) },
+    options: { layout:{padding:{top:padTop, left:28, right:28, bottom:14}},
+      plugins: { legend:{display:!!o.legend, position:'bottom', labels:{color:CINZA, font:{size:(o.legend||11)*PT, family:FF}, boxWidth:10*PT, boxHeight:10*PT}}, tooltip:{enabled:false},
+        bgf:{color:o.bg, border:o.border}, ttl: tt ? {parts:tt.parts, size:tt.size*PT, y:tt.size*PT*0.45} : {}, vals:{size:lbl*PT, inside:o.inside} },
+      scales: { x:{offset:true, grid:{display:false}, border:{display:!linha || true, color:'#BFBFBF', width:3}, ticks:{color:CINZA, font:{size:xs*PT, family:FF}, autoSkip:false, maxRotation:0}},
+        y:{display:!!o.yAxis, beginAtZero:!linha, grace: linha ? '15%' : '4%', grid:{display:!!o.yAxis, color:'#D9D9D9', lineWidth:2}, border:{display:false}, ticks:{color:CINZA, font:{size:10*PT, family:FF}, maxTicksLimit:8}} } } });
+}
+function pieImg(w, h, valor, legenda){
+  const c = offCanvas(w, h), x = c.getContext('2d'), W = c.width, H = c.height, ls = 11*PT;
+  x.font = `${ls}px ${FF}`; x.textBaseline = 'middle'; const tw = x.measureText(legenda).width, lx = (W - tw - ls*1.3)/2, ly = ls*1.3;
+  x.fillStyle = '#7F7F7F'; x.fillRect(lx, ly - ls*0.45, ls*0.9, ls*0.9); x.fillStyle = CINZA; x.fillText(legenda, lx + ls*1.3, ly);
+  const r = Math.min(W*0.4, (H - ly*2.2)/2), cx = W/2, cy = ly*2.2 + r;
+  x.beginPath(); x.arc(cx, cy, r, 0, Math.PI*2); x.fillStyle = '#7F7F7F'; x.fill();
+  x.fillStyle = '#fff'; x.font = `${20*PT}px ${FF}`; x.textAlign = 'center'; x.fillText(fmtI(valor), cx, cy);
+  const u = c.toDataURL('image/png'); c.remove(); return u;
+}
+const quebra = (t, n=12) => { const w = String(t).split(' '), out = []; let l = ''; w.forEach(p => { if ((l+' '+p).trim().length > n && l) { out.push(l); l = p; } else l = (l+' '+p).trim(); }); if (l) out.push(l); return out.length > 1 ? out : out[0]; };
+function escBars(D, snap, w, h, titulo){ const v = snap.valor;
+  return chartImg(w, h, { labels:D.firmas.map(f=>quebra(f)), series:[['AGUARDANDO EXECUÇÃO', D.firmas.map(f=>v.esc[f]?.exec||0)], ['AGUARDANDO INFORMAÇÕES', D.firmas.map(f=>v.esc[f]?.info||0)]],
+    colors:['#A9D18E','#5FA83F'], title:{parts:titulo(D.firmas.reduce((a,f)=>a+totEsc(v,f),0)), size:12}, legend:11, lbl:11, xs:11, catPct:0.75, barPct:0.8 }); }
+function escLine(D, snap, w, h){ const v = snap.valor;
+  return chartImg(w, h, { type:'line', labels:D.firmas.map(f=>quebra(f)), series:[['Total', D.firmas.map(f=>totEsc(v,f))]], colors:['#4EA72E'], lbl:15, xs:15 }); }
+const TIPOS_INT = ['Obrigação de Fazer - Decisões', ['Obrigação de Fazer - Decisões -','[RIO]']];
+function intBars(snap, w, h, titulo){ const v = snap.valor;
+  return chartImg(w, h, { labels:TIPOS_INT, series:[['AGUARDANDO EXECUÇÃO', [v.int?.dec?.exec||0, v.int?.rio?.exec||0]], ['AGUARDANDO INFORMAÇÕES', [v.int?.dec?.info||0, v.int?.rio?.info||0]]],
+    colors:['#93C47D','#3D9A2E'], title:{parts:titulo(totInt(v,'dec')+totInt(v,'rio')), size:13}, legend:12, lbl:12, xs:12, catPct:0.6, barPct:0.85 }); }
+
+/* imagem do modelo → gráfico novo (chave: nº do slide + nome da imagem) */
+const IMGS = {
+  '2:Imagem 2': (D,w,h) => chartImg(w,h,{labels:D.ent.map(e=>ddmm(e[0])), series:[['Entradas',D.ent.map(e=>e[1])]], colors:['#FFC000'], title:{parts:[[`Total de Entrada da Semana: ${fmtI(soma(D.ent))}`]], size:14}, yAxis:true, bg:'#FFFFFF', border:true}),
+  '2:Imagem 5': (D,w,h) => chartImg(w,h,{labels:[nomeMes(D.ant), nomeMes(D.mes)], series:[['',D.entMes]], colors:['#FFC000'], lbl:15, xs:13, barPct:0.4}),
+  '2:Imagem 6': (D,w,h) => chartImg(w,h,{labels:['Total'], series:[['',[D.valores]]], colors:['#FFC000'], title:{parts:[['SOLICITAÇÃO DE VALORES']], size:17}, inside:true, lbl:15, xs:12, barPct:0.42}),
+  '3:Imagem 5': (D,w,h) => chartImg(w,h,{labels:D.os1.map(e=>ddmm(e[0])), series:[['OS',D.os1.map(e=>e[1])]], colors:['#156082'], title:{parts:[[`Total da Semana: ${fmtI(soma(D.os1))}`]], size:14}, yAxis:true, barPct:0.35}),
+  '3:Imagem 7': (D,w,h) => chartImg(w,h,{labels:[nomeMes(D.ant), nomeMes(D.mes)], series:[['',D.osMes]], colors:['#156082'], lbl:15, xs:13, barPct:0.32}),
+  '4:Imagem 12': (D,w,h) => chartImg(w,h,{labels:D.rev.map(e=>fmt(e[0])), series:[['Revogações',D.rev.map(e=>e[1])]], colors:['#7F7F7F'], title:{parts:[[`Total de entrada da semana: ${fmtI(soma(D.rev))}`]], size:13}, yAxis:true, xs:9, bg:'#FFFFFF', border:true, barPct:0.35}),
+  '4:Imagem 10': (D,w,h) => pieImg(w,h,D.revAprov,'AGUARDANDO APROVAÇÃO'),
+  '4:Imagem 4':  (D,w,h) => chartImg(w,h,{labels:[nomeMes(D.ant), nomeMes(D.mes)], series:[['',D.revMes]], colors:['#7F7F7F'], lbl:12, xs:13, barPct:0.32}),
+  '4:Imagem 14': (D,w,h) => chartImg(w,h,{labels:[nomeMes(D.mes)], series:[['',[D.revFin]]], colors:['#7F7F7F'], title:{parts:[['Total de Requisições '],['Finalizadas',1],[`: ${fmtI(D.revFin)}`]], size:15}, lbl:0, xs:12, barPct:0.35}),
+  '5:Imagem 2':  (D,w,h) => escBars(D, D.prevUse, w, h, n => [[`Total de requisições com o ESCRITÓRIO: ${fmtI(n)}`]]),
+  '5:Imagem 14': (D,w,h) => escLine(D, D.prevUse, w, h),
+  '6:Imagem 2':  (D,w,h) => escBars(D, D.cur, w, h, n => [['Total com os Escritórios: '],[fmtI(n),1]]),
+  '6:Imagem 13': (D,w,h) => escLine(D, D.cur, w, h),
+  '7:Imagem 6':  (D,w,h) => intBars(D.prevUse, w, h, n => [['Requisição com '],['Time interno',1],[`: ${fmtI(n)}`]]),
+  '8:Imagem 17': (D,w,h) => intBars(D.cur, w, h, n => [['Total com o Time Interno: '],[fmtI(n),1]])
+};
+
+/* ---- edição do XML dos slides ---- */
+const XML_DECL = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n';
+const parseXml = s => new DOMParser().parseFromString(s, 'application/xml');
+const serXml = d => { const s = new XMLSerializer().serializeToString(d); return s.startsWith('<?xml') ? s : XML_DECL + s; };
+function shapeEl(doc, name){ for (const c of doc.getElementsByTagName('p:cNvPr')) if (c.getAttribute('name') === name) { let e = c; while (e && e.nodeName !== 'p:sp' && e.nodeName !== 'p:pic') e = e.parentNode; return e; } return null; }
+const runsOf = el => el ? [...el.getElementsByTagName('a:t')] : [];
+function ajustaFonte(sp, antes, depois){ // texto novo mais longo: reduz a fonte para não quebrar linha
+  if (!sp || depois <= antes) return; const f = Math.max(0.7, antes/depois*0.96);
+  for (const tag of ['a:rPr','a:endParaRPr','a:defRPr']) for (const r of sp.getElementsByTagName(tag)) { const z = r.getAttribute('sz'); if (z) r.setAttribute('sz', String(Math.round(+z*f/100)*100)); }
+}
+function trocaJunto(doc, name, re, novo){ const sp = shapeEl(doc, name), r = runsOf(sp); if (!r.length) return; const j = r.map(t=>t.textContent).join(''); if (!re.test(j)) return;
+  const n = j.replace(re, novo); r[0].textContent = n; r.slice(1).forEach(t => t.textContent = ''); ajustaFonte(sp, j.length, n.length); }
+function trocaRuns(doc, name, fn){ runsOf(shapeEl(doc, name)).forEach((t,i) => { const v = fn(t.textContent, i); if (v != null) t.textContent = v; }); }
+function seta(doc, name, sobe){ const sp = shapeEl(doc, name); if (!sp) return; const xf = sp.getElementsByTagName('a:xfrm')[0]; if (!xf) return; if (sobe) xf.setAttribute('flipV','1'); else xf.removeAttribute('flipV'); }
+function caixaVar(doc, name, ex, inf){ // "Execução: +2,18% (32) / Informação: +6,07% (35)"
+  const dif = [ex.d, inf.d]; let k = 0; const sp = shapeEl(doc, name), linhas = () => [...(sp ? sp.getElementsByTagName('a:p') : [])].map(p => runsOf(p).map(t=>t.textContent).join('').length);
+  const antes = Math.max(0, ...linhas());
+  trocaRuns(doc, name, t => /execu/i.test(t) ? `${t.match(/^\s*/)[0]}Execução: ${sinal(ex.p)}${fmtPct(ex.p)} ` : /informa/i.test(t) ? `Informação: ${sinal(inf.p)}${fmtPct(inf.p)} ` : /^\s*\(\s*-?\d+\s*\)\s*$/.test(t) ? `(${dif[k] == null ? '—' : fmtI(Math.abs(dif[k++]))})` : null);
+  ajustaFonte(sp, antes, Math.max(0, ...linhas()));
+}
+const DATA_RE = /\d{2}\/\d{2}\/\d{4}/;
+const TEXTOS = {
+  2: (doc,D) => trocaJunto(doc, 'CaixaDeTexto 18', DATA_RE, fmt(D.ref)),
+  3: (doc,D) => trocaJunto(doc, 'CaixaDeTexto 18', DATA_RE, fmt(D.ref)),
+  4: (doc,D) => { trocaJunto(doc, 'CaixaDeTexto 18', DATA_RE, fmt(D.ref)); trocaJunto(doc, 'Espaço Reservado para Texto 3', /(m[eê]s\s+)[A-Za-zÇÃÉÍÓÚÂÊÔçãéíóúâêô]+/, '$1' + nomeMes(D.mes)); },
+  5: (doc,D) => { trocaJunto(doc, 'Espaço Reservado para Texto 3', /\d{2}\/\d{2}(\/\d{4})?/, ddmm(D.prevUse.data));
+    trocaRuns(doc, 'Retângulo: Cantos Arredondados 15', t => /^\s*[\d.]+\s*$/.test(t) ? fmtI(D.firmas.reduce((a,f)=>a+totEsc(D.prevUse.valor,f),0)) : null); },
+  6: (doc,D) => { trocaJunto(doc, 'CaixaDeTexto 18', DATA_RE, fmt(D.ref));
+    const c = D.firmas.reduce((a,f)=>a+totEsc(D.cur.valor,f),0), p = D.prev ? D.firmas.reduce((a,f)=>a+totEsc(D.prev.valor,f),0) : null, v = p ? pct(c,p) : null;
+    trocaJunto(doc, 'CaixaDeTexto 15', /.+/, fmtPct(v)); seta(doc, 'Seta: para Baixo 14', v != null && v > 0); },
+  7: (doc,D) => { trocaJunto(doc, 'Espaço Reservado para Texto 3', /\d{2}\/\d{2}(\/\d{4})?/, ddmm(D.prevUse.data));
+    const a = D.prevUse.valor.int || {}, b = D.prev2 ? D.prev2.valor.int || {} : null;
+    const comp = (k,s) => { const x = a[k]?.[s] || 0, y = b ? (b[k]?.[s] || 0) : null; return {p: y ? pct(x,y) : null, d: y == null ? null : x - y}; };
+    caixaVar(doc, 'Retângulo: Cantos Arredondados 18', comp('dec','exec'), comp('dec','info'));
+    caixaVar(doc, 'Retângulo: Cantos Arredondados 4',  comp('rio','exec'), comp('rio','info')); },
+  8: (doc,D) => { trocaJunto(doc, 'CaixaDeTexto 18', DATA_RE, fmt(D.ref));
+    const v = k => D.prev ? pct(totInt(D.cur.valor,k), totInt(D.prev.valor,k)) : null, vd = v('dec'), vr = v('rio');
+    trocaJunto(doc, 'CaixaDeTexto 26', /.+/, fmtPct(vd)); seta(doc, 'Seta: para Baixo 24', vd != null && vd > 0);
+    trocaJunto(doc, 'CaixaDeTexto 30', /.+/, fmtPct(vr)); seta(doc, 'Seta: para Baixo 28', vr != null && vr > 0); }
+};
+
+/* ---- modelo (.pptx): arquivo modelo.pptx no site, ou escolhido uma vez e guardado no navegador ---- */
+function idb(){ return new Promise((res,rej) => { const q = indexedDB.open('cob', 1); q.onupgradeneeded = () => q.result.createObjectStore('kv'); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); }
+async function idbGet(k){ const db = await idb(); return new Promise((res,rej) => { const t = db.transaction('kv').objectStore('kv').get(k); t.onsuccess = () => res(t.result); t.onerror = () => rej(t.error); }); }
+async function idbSet(k,v){ const db = await idb(); return new Promise((res,rej) => { const t = db.transaction('kv','readwrite').objectStore('kv').put(v,k); t.onsuccess = () => res(); t.onerror = () => rej(t.error); }); }
+async function getModelo(){
+  if (S.modelo) return S.modelo;
+  try { const b = await idbGet('modelo'); if (b) return (S.modelo = b); } catch (e) {}
+  try { const r = await fetch('modelo.pptx', {cache:'no-cache'}); if (r.ok) return (S.modelo = await r.arrayBuffer()); } catch (e) {}
+  return null;
+}
+async function definirModelo(input){
+  const f = input.files[0]; if (!f) return;
+  S.modelo = await f.arrayBuffer(); S.deck = null;
+  try { await idbSet('modelo', S.modelo); } catch (e) {}
+  closeModal(); toast('✔ Modelo do PPT salvo neste navegador.'); if (VIEW === 'cargas') render();
+  if (S.depoisModelo) { const f2 = S.depoisModelo; S.depoisModelo = null; f2(); }
+}
+function pedirModelo(depois){
+  S.depoisModelo = depois;
+  modal(`<h3 style="margin:0 0 6px">Escolha o modelo do PPT</h3><div class="desc">Selecione a apresentação da reunião semanal (.pptx). Ela fica guardada neste navegador; a plataforma só troca os gráficos, as datas e os percentuais.</div>
+  <div style="margin:16px 0"><input type="file" accept=".pptx" onchange="definirModelo(this)"></div><div style="text-align:right"><button class="btn light" onclick="closeModal()">Cancelar</button></div>`);
+}
+async function gerarDeck(){
+  if (!S.req.length) throw new Error('Carregue as bases antes de gerar o PPT.');
+  if (typeof JSZip === 'undefined' || !window.Chart) throw new Error('Bibliotecas do PPT não carregaram. Recarregue a página.');
+  const buf = await getModelo(); if (!buf) return null;
+  const zip = await JSZip.loadAsync(buf, {createFolders:false}), D = dadosModelo();
+  D.prevUse = D.prev || D.cur;
+  const slides = await ordemSlides(zip);
+  for (let n = 1; n <= slides.length; n++) {
+    const path = slides[n-1], relPath = path.replace('slides/', 'slides/_rels/') + '.rels';
+    const doc = parseXml(await zip.file(path).async('string'));
+    const rels = {}; if (zip.file(relPath)) for (const r of parseXml(await zip.file(relPath).async('string')).getElementsByTagName('Relationship')) rels[r.getAttribute('Id')] = r.getAttribute('Target');
+    for (const pic of [...doc.getElementsByTagName('p:pic')]) {
+      const nome = pic.getElementsByTagName('p:cNvPr')[0]?.getAttribute('name'), fn = IMGS[`${n}:${nome}`]; if (!fn) continue;
+      const blip = pic.getElementsByTagName('a:blip')[0], alvo = rels[blip.getAttribute('r:embed')]; if (!alvo) continue;
+      const ext = pic.getElementsByTagName('a:xfrm')[0].getElementsByTagName('a:ext')[0];
+      const w = +ext.getAttribute('cx')/914400, h = +ext.getAttribute('cy')/914400;
+      const media = 'ppt/' + alvo.replace(/^\.\.\//,'');
+      zip.file(media, fn(D, w, h).split(',')[1], {base64:true, createFolders:false});
+      const sr = pic.getElementsByTagName('a:srcRect')[0]; if (sr) sr.parentNode.removeChild(sr);
+    }
+    if (TEXTOS[n]) TEXTOS[n](doc, D);
+    zip.file(path, serXml(doc), {createFolders:false});
+  }
+  return {zip, D};
+}
+async function ordemSlides(zip){
+  const pres = parseXml(await zip.file('ppt/presentation.xml').async('string')), rel = parseXml(await zip.file('ppt/_rels/presentation.xml.rels').async('string'));
+  const m = {}; for (const r of rel.getElementsByTagName('Relationship')) m[r.getAttribute('Id')] = r.getAttribute('Target');
+  return [...pres.getElementsByTagName('p:sldId')].map(s => 'ppt/' + m[s.getAttribute('r:id')].replace(/^\//,'').replace(/^ppt\//,''));
+}
+async function exportPPT(){
+  try {
+    toast('Montando o PPT…', false, true);
+    const g = await gerarDeck(); if (!g) { hideToast(); return pedirModelo(exportPPT); }
+    await salvarSnap(g.D.ref);
+    const blob = await g.zip.generateAsync({type:'blob', compression:'DEFLATE', mimeType:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `Apresentação Reunião Semanal ${fmt(g.D.ref).replace(/\//g,'-')}.pptx`; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast(g.D.prev ? `✔ PPT gerado (dados até ${fmt(g.D.ref)}, comparado com ${fmt(g.D.prev.data)}).` : `✔ PPT gerado. Ainda não há foto da semana anterior para os percentuais.`);
+  } catch (e) { console.error(e); toast('Erro ao gerar o PPT: ' + (e.message||e), true); }
+}
+
+/* ---- modo Apresentar: mostra os mesmos slides do PPT gerado ---- */
+const EMU = 9144; // EMU por px (100 px por polegada)
+function corTema(doc){ const m = {}; const cs = doc.getElementsByTagName('a:clrScheme')[0]; if (!cs) return m;
+  for (const c of cs.children) { const k = c.nodeName.replace('a:',''), s = c.getElementsByTagName('a:srgbClr')[0] || c.getElementsByTagName('a:sysClr')[0];
+    if (s) m[k] = s.getAttribute('val') && s.nodeName==='a:srgbClr' ? s.getAttribute('val') : (s.getAttribute('lastClr') || '000000'); }
+  Object.assign(m, {tx1:m.dk1, bg1:m.lt1, tx2:m.dk2, bg2:m.lt2}); return m; }
+function resolveCor(el, tema){
+  if (!el) return null; const c = [...el.children].find(x => ['a:srgbClr','a:schemeClr','a:sysClr'].includes(x.nodeName)); if (!c) return null;
+  let hex = c.nodeName === 'a:srgbClr' ? c.getAttribute('val') : c.nodeName === 'a:sysClr' ? (c.getAttribute('lastClr')||'000000') : tema[c.getAttribute('val')] || '000000';
+  const mod = c.getElementsByTagName('a:lumMod')[0], off = c.getElementsByTagName('a:lumOff')[0];
+  if (mod || off) { let [r,g,b] = [0,2,4].map(i=>parseInt(hex.substr(i,2),16)/255); const mx = Math.max(r,g,b), mn = Math.min(r,g,b); let h = 0, s = 0, l = (mx+mn)/2;
+    if (mx !== mn) { const d = mx-mn; s = l > .5 ? d/(2-mx-mn) : d/(mx+mn); h = mx===r ? (g-b)/d + (g<b?6:0) : mx===g ? (b-r)/d + 2 : (r-g)/d + 4; h /= 6; }
+    l = Math.min(1, Math.max(0, l*(mod ? +mod.getAttribute('val')/1e5 : 1) + (off ? +off.getAttribute('val')/1e5 : 0)));
+    const q = l < .5 ? l*(1+s) : l+s-l*s, p = 2*l-q, f = t => { t = (t+1)%1; return t < 1/6 ? p+(q-p)*6*t : t < .5 ? q : t < 2/3 ? p+(q-p)*(2/3-t)*6 : p; };
+    hex = [h+1/3, h, h-1/3].map(t => Math.round((s ? f(t) : l)*255).toString(16).padStart(2,'0')).join(''); }
+  const a = c.getElementsByTagName('a:alpha')[0];
+  return a ? `rgba(${parseInt(hex.substr(0,2),16)},${parseInt(hex.substr(2,2),16)},${parseInt(hex.substr(4,2),16)},${+a.getAttribute('val')/1e5})` : '#' + hex;
+}
+const filho = (el, nome) => el ? [...el.children].find(c => c.nodeName === nome) : null;
+function preenchTexto(pr, tema){ // cor (ou degradê) de um rPr/defRPr
+  if (!pr) return null; const sf = filho(pr,'a:solidFill'); if (sf) return {cor:resolveCor(sf, tema)};
+  const gf = filho(pr,'a:gradFill'); if (gf) { const cs = [...gf.getElementsByTagName('a:gs')].map(g => resolveCor(g, tema)).filter(Boolean); if (cs.length) return {grad:`linear-gradient(180deg,${cs.join(',')})`, cor:cs[0]}; }
+  return null;
+}
+async function estilosLayout(zip, slidePath, rels, tema){ // estilo herdado dos placeholders do layout (tamanho, negrito, cor, alinhamento)
+  const alvo = Object.values(rels).find(t => /slideLayout\d+\.xml$/.test(t)); if (!alvo) return {};
+  const f = zip.file('ppt/slideLayouts/' + alvo.split('/').pop()); if (!f) return {};
+  const doc = parseXml(await f.async('string')), m = {};
+  for (const sp of doc.getElementsByTagName('p:sp')) {
+    const ph = sp.getElementsByTagName('p:ph')[0]; if (!ph) continue;
+    const lv = sp.getElementsByTagName('a:lvl1pPr')[0], d = lv && filho(lv,'a:defRPr'), bp = sp.getElementsByTagName('a:bodyPr')[0];
+    const e = { sz:d?.getAttribute('sz'), b:d?.getAttribute('b'), fill:preenchTexto(d, tema), anchor:bp?.getAttribute('anchor'), algn:lv?.getAttribute('algn') };
+    m[ph.getAttribute('idx') || ph.getAttribute('type')] = e;
+  }
+  return m;
+}
+async function slidesHTML(zip){
+  const tema = corTema(parseXml(await zip.file('ppt/theme/theme1.xml').async('string'))), paths = await ordemSlides(zip), out = [];
+  S.blobs.forEach(u => URL.revokeObjectURL(u)); S.blobs = [];
+  for (const path of paths) {
+    const doc = parseXml(await zip.file(path).async('string')), relPath = path.replace('slides/', 'slides/_rels/') + '.rels', rels = {};
+    if (zip.file(relPath)) for (const r of parseXml(await zip.file(relPath).async('string')).getElementsByTagName('Relationship')) rels[r.getAttribute('Id')] = r.getAttribute('Target');
+    const tree = doc.getElementsByTagName('p:spTree')[0], els = [], lay = await estilosLayout(zip, path, rels, tema);
+    const temFoto = [...tree.children].some(c => c.nodeName === 'p:pic' && +(c.getElementsByTagName('a:xfrm')[0]?.getElementsByTagName('a:ext')[0]?.getAttribute('cx')||0) > 12*914400);
+    for (const el of tree.children) {
+      const xf = el.getElementsByTagName('a:xfrm')[0]; if (!xf) continue;
+      const o = filho(xf,'a:off'), e = filho(xf,'a:ext'); if (!o || !e) continue;
+      const box = `left:${+o.getAttribute('x')/EMU}px;top:${+o.getAttribute('y')/EMU}px;width:${+e.getAttribute('cx')/EMU}px;height:${+e.getAttribute('cy')/EMU}px`;
+      const flip = `${xf.getAttribute('flipV')==='1'?'scaleY(-1) ':''}${xf.getAttribute('flipH')==='1'?'scaleX(-1) ':''}${xf.getAttribute('rot')?`rotate(${+xf.getAttribute('rot')/60000}deg)`:''}`;
+      if (el.nodeName === 'p:pic') {
+        const alvo = rels[el.getElementsByTagName('a:blip')[0]?.getAttribute('r:embed')]; const f = alvo && zip.file('ppt/' + alvo.replace(/^\.\.\//,'')); if (!f) continue;
+        const url = URL.createObjectURL(await f.async('blob')); S.blobs.push(url);
+        const sr = el.getElementsByTagName('a:srcRect')[0], g = k => sr ? (+sr.getAttribute(k) || 0)/1e5 : 0, l = g('l'), t = g('t'), r = g('r'), b = g('b');
+        els.push(`<div class="pe" style="${box};overflow:hidden"><img src="${url}" style="position:absolute;left:${-l/(1-l-r)*100}%;top:${-t/(1-t-b)*100}%;width:${100/(1-l-r)}%;height:${100/(1-t-b)}%"></div>`);
+        continue;
+      }
+      if (el.nodeName !== 'p:sp') continue;
+      if (el.getElementsByTagName('p:ph')[0] && !el.getElementsByTagName('a:t').length) continue; // placeholder vazio não aparece na apresentação
+      const spPr = filho(el,'p:spPr'), geo = spPr && spPr.getElementsByTagName('a:prstGeom')[0]?.getAttribute('prst'), fill = resolveCor(filho(spPr,'a:solidFill'), tema);
+      const body = filho(el,'p:txBody'); let html = '';
+      if (body) {
+        const ph = el.getElementsByTagName('p:ph')[0], L = ph ? (lay[ph.getAttribute('idx') || ph.getAttribute('type')] || {}) : {};
+        const corForma = resolveCor(el.getElementsByTagName('a:fontRef')[0], tema); // cor do texto definida pelo estilo da forma
+        const bp = filho(body,'a:bodyPr'), anc = bp?.getAttribute('anchor') || L.anchor || 't';
+        const ps = [...body.getElementsByTagName('a:p')].map(p => {
+          const algn = filho(p,'a:pPr')?.getAttribute('algn') || L.algn; let tx = '';
+          for (const r of p.children) {
+            if (r.nodeName === 'a:br') { tx += '<br>'; continue; } if (r.nodeName !== 'a:r') continue;
+            const pr = filho(r,'a:rPr'), sz = pr?.getAttribute('sz') || L.sz, b = pr?.getAttribute('b') ?? L.b;
+            const fl = preenchTexto(pr, tema) || preenchTexto(filho(p,'a:endParaRPr'), tema) || L.fill || (corForma ? {cor:corForma} : {cor: temFoto ? '#fff' : '#404040'});
+            const corCss = fl.grad ? `background:${fl.grad};-webkit-background-clip:text;background-clip:text;color:transparent;` : `color:${fl.cor};`;
+            tx += `<span style="font-size:${(sz ? +sz/100 : 18)*100/72}px;${b==='1'?'font-weight:700;':''}${corCss}">${esc(filho(r,'a:t')?.textContent||'')}</span>`;
+          }
+          return tx ? `<div style="text-align:${{ctr:'center',r:'right'}[algn]||'left'}">${tx}</div>` : '';
+        }).join('');
+        if (ps) html = `<div class="tx" style="display:flex;flex-direction:column;justify-content:${{ctr:'center',b:'flex-end'}[anc]||'flex-start'};height:100%;padding:4px 8px">${ps}</div>`;
+      }
+      let forma = '';
+      if (geo === 'downArrow' && fill) forma = `<svg viewBox="0 0 10 20" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%"><path d="M3 0h4v12h3L5 20 0 12h3z" fill="${fill}"/></svg>`;
+      else if (/curved.*Arrow/i.test(geo||'') && fill) forma = `<svg viewBox="0 0 10 40" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%"><path d="M10 0C2 4 1 22 6 32L4 33l6 7 0-10-2 1C4 22 5 6 10 3z" fill="${fill}"/></svg>`;
+      if (!html && !forma && !fill) continue;
+      const bg = !forma && fill ? `background:${fill};${geo==='roundRect'?'border-radius:18px;':''}` : '';
+      els.push(`<div class="pe" style="${box};${bg}${flip?`transform:${flip};`:''}">${forma}${html}</div>`);
+    }
+    out.push(`<div class="pslide">${els.join('')}</div>`);
+  }
+  return out;
+}
+async function apresentar(){
+  try {
+    toast('Montando a apresentação…', false, true);
+    const g = await gerarDeck(); if (!g) { hideToast(); return pedirModelo(apresentar); }
+    const sl = await slidesHTML(g.zip), el = document.getElementById('pres');
+    el.innerHTML = `<div class="pstage">${sl.map((s,i)=>`<div class="pwrap${i===0?' on':''}">${s}</div>`).join('')}</div>
+      <div class="pres-nav"><button class="btn" onclick="pmove(-1)">◀</button><span id="pnum" class="btn" style="cursor:default"></span><button class="btn" onclick="pmove(1)">▶</button><button class="btn" onclick="exportPPT()">${ic('download',14)}PPT</button><button class="btn" onclick="fecharPres()">✕</button></div>`;
+    el.style.display = 'block'; S.pi = 0; pshow(); escala(); hideToast();
+    try { el.requestFullscreen && el.requestFullscreen().catch(()=>{}); } catch (e) {}
+  } catch (e) { console.error(e); toast('Erro ao montar a apresentação: ' + (e.message||e), true); }
+}
+function escala(){ const s = Math.min(window.innerWidth/1333.33, window.innerHeight/750); document.querySelectorAll('#pres .pslide').forEach(p => p.style.transform = `scale(${s})`); }
+window.addEventListener('resize', () => { if (document.getElementById('pres').style.display === 'block') escala(); });
+function caber(wrap){ // reduz o texto que não cabe na caixa (fonte diferente da do PowerPoint)
+  if (wrap.dataset.ok) return; wrap.dataset.ok = 1;
+  wrap.querySelectorAll('.pe .tx').forEach(tx => { const box = tx.parentElement, spans = [...tx.querySelectorAll('span')];
+    for (let i = 0; i < 12 && (tx.scrollHeight > box.clientHeight + 2 || tx.scrollWidth > box.clientWidth + 2); i++) spans.forEach(sp => sp.style.fontSize = (parseFloat(sp.style.fontSize)*0.94) + 'px'); });
+}
+function pshow(){ const sl = [...document.querySelectorAll('#pres .pwrap')]; sl.forEach((s,i) => s.classList.toggle('on', i===S.pi)); caber(sl[S.pi]); document.getElementById('pnum').textContent = `${S.pi+1}/${sl.length}`; }
+function pmove(d){ const n = document.querySelectorAll('#pres .pwrap').length; S.pi = Math.min(n-1, Math.max(0, S.pi+d)); pshow(); }
+function fecharPres(){ const el = document.getElementById('pres'); el.style.display = 'none'; el.innerHTML = ''; if (document.fullscreenElement) document.exitFullscreen().catch(()=>{}); }
+document.addEventListener('keydown', e => {
+  if (document.getElementById('pres').style.display !== 'block') return;
+  if (e.key==='ArrowRight' || e.key===' ' || e.key==='PageDown') { e.preventDefault(); pmove(1); }
+  else if (e.key==='ArrowLeft' || e.key==='PageUp') pmove(-1);
+  else if (e.key==='Escape') fecharPres();
+});
+document.getElementById('modalBg').addEventListener('click', e => { if (e.target.id==='modalBg') closeModal(); });
+document.querySelectorAll('[data-i]').forEach(el => el.outerHTML = ic(el.dataset.i, 15));
+
+/* ===================== Login (Supabase Auth) ===================== */
+const LOGO = `<div class="eyebrow"><span class="dot"></span>ÁGUAS DO RIO · JURÍDICO</div>`;
+function telaLogin(msg='', erro=false){
+  document.body.classList.add('bloq');
+  document.getElementById('lcard').innerHTML = `${LOGO}<h1>Cumprimento de Obrigações</h1><div class="desc">Entre com seu e-mail e senha.</div>
+  <form onsubmit="entrar(event)"><label>E-mail</label><input type="email" id="lEmail" autocomplete="username" required>
+  <label>Senha</label><input type="password" id="lSenha" autocomplete="current-password" required>
+  <button class="btn" id="lBtn">Entrar</button></form>
+  <button class="link" onclick="esqueci()">Esqueci minha senha</button>
+  <div class="lmsg ${erro?'err':''}" id="lMsg">${esc(msg)}</div>`;
+  setTimeout(()=>document.getElementById('lEmail')?.focus(), 50);
+}
+function lmsg(t, erro=false){ const m = document.getElementById('lMsg'); if (m) { m.textContent = t; m.className = 'lmsg' + (erro?' err':''); } }
+async function entrar(ev){
+  ev.preventDefault(); const b = document.getElementById('lBtn'); b.disabled = true; b.textContent = 'Entrando…'; lmsg('');
+  const { data, error } = await sb.auth.signInWithPassword({ email:document.getElementById('lEmail').value.trim(), password:document.getElementById('lSenha').value });
+  if (error) { b.disabled = false; b.textContent = 'Entrar'; return lmsg(/invalid/i.test(error.message) ? 'E-mail ou senha incorretos.' : 'Não foi possível entrar: ' + error.message, true); }
+  await liberar(data.session);
+}
+async function esqueci(){
+  const email = document.getElementById('lEmail')?.value.trim();
+  if (!email) return lmsg('Digite seu e-mail acima e clique de novo em "Esqueci minha senha".', true);
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  lmsg(error ? 'Não foi possível enviar: ' + error.message : 'Se o e-mail estiver cadastrado, você vai receber um link para criar uma nova senha.', !!error);
+}
+function telaNovaSenha(){
+  document.body.classList.add('bloq');
+  document.getElementById('lcard').innerHTML = `${LOGO}<h1>Nova senha</h1><div class="desc">Escolha uma senha com pelo menos 8 caracteres.</div>
+  <form onsubmit="salvarSenha(event)"><label>Nova senha</label><input type="password" id="nS1" autocomplete="new-password" minlength="8" required>
+  <label>Repita a senha</label><input type="password" id="nS2" autocomplete="new-password" minlength="8" required><button class="btn" id="nBtn">Salvar senha</button></form><div class="lmsg" id="lMsg"></div>`;
+}
+async function salvarSenha(ev){
+  ev.preventDefault(); const a = document.getElementById('nS1').value, b = document.getElementById('nS2').value;
+  if (a !== b) return lmsg('As senhas não são iguais.', true);
+  const { error } = await sb.auth.updateUser({ password:a });
+  if (error) return lmsg('Não foi possível salvar: ' + error.message, true);
+  history.replaceState(null, '', location.pathname);
+  const { data } = await sb.auth.getSession(); await liberar(data.session);
+}
+async function liberar(session){
+  if (!session) return telaLogin();
+  const { data:ok, error } = await sb.rpc('cob_autorizado');
+  if (error || !ok) { await sb.auth.signOut(); return telaLogin(error ? 'Erro ao verificar acesso: ' + error.message : 'Seu e-mail não está liberado para esta plataforma. Peça a liberação à responsável.', true); }
+  S.user = session.user;
+  document.getElementById('user').innerHTML = `${esc(session.user.email)} <button class="btn sm light" onclick="sair()">Sair</button>`;
+  document.body.classList.remove('bloq');
+  if (!S.carregou) { S.carregou = true; buildNav(); await load(); }
+}
+async function sair(){ await sb.auth.signOut(); location.reload(); }
+(async () => {
+  if (!sb) { telaLogin('Não foi possível conectar ao Supabase. Recarregue a página.', true); return; }
+  if (/type=recovery/.test(location.hash)) S.recuperando = true;
+  sb.auth.onAuthStateChange((ev) => { if (ev === 'PASSWORD_RECOVERY') { S.recuperando = true; setTimeout(telaNovaSenha, 0); } });
+  const { data } = await sb.auth.getSession();
+  if (S.recuperando) return telaNovaSenha();
+  if (data.session) await liberar(data.session); else telaLogin();
+})();
+</script>
+</body>
+</html>
