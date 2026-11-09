@@ -160,7 +160,7 @@ body.bloq #login{display:flex}
 
 <script>
 /* ===================== Conexão ===================== */
-const VERSAO = '2026.11.07-b';
+const VERSAO = '2026.11.08-a';
 const SB_URL = 'https://ouhaiffxwxucmesprbjr.supabase.co';
 const SB_KEY = 'sb_publishable_pD8U39Nl4xhC-95t-1FQvw_giOSi7le';
 let sb = null;
@@ -234,13 +234,20 @@ const bG = g => B(g, GRUPOS[g]||'');
 const cardH = (t, d='', tools='') => `<div class="card-h"><div><h3>${esc(t)}</h3>${d?`<div class="desc">${d}</div>`:''}</div>${tools}</div>`;
 
 /* ===================== Supabase ===================== */
+function erroTxt(e){ // texto legível de um erro do Supabase/PostgREST
+  if (!e) return 'erro desconhecido';
+  if (typeof e === 'string') return e;
+  const partes = [e.message, e.details, e.hint, e.code && `código ${e.code}`, e.status && `HTTP ${e.status}`].filter(Boolean);
+  return partes.length ? partes.join(' · ') : (()=>{ try { return JSON.stringify(e); } catch (x) { return String(e); } })();
+}
 async function fetchAll(t){
-  const head = await sb.from(t).select('*', {count:'exact', head:true});
-  if (head.error) throw head.error;
-  const pages = Math.ceil((head.count||0) / 1000), out = [];
-  for (let i=0; i<pages; i+=6) {
+  // 1ª página já traz o total (GET, para o erro vir com mensagem — HEAD não traz texto)
+  const first = await sb.from(t).select('*', {count:'exact'}).order(PK[t]).range(0, 999);
+  if (first.error) { const e = first.error; e.status = first.status; e.tabela = t; throw e; }
+  const out = [...first.data], pages = Math.ceil((first.count || first.data.length) / 1000);
+  for (let i=1; i<pages; i+=6) {
     const res = await Promise.all(Array.from({length:Math.min(6, pages-i)}, (_,j) => sb.from(t).select('*').order(PK[t]).range((i+j)*1000, (i+j)*1000+999)));
-    res.forEach(r => { if (r.error) throw r.error; out.push(...r.data); });
+    res.forEach(r => { if (r.error) { const e = r.error; e.status = r.status; e.tabela = t; throw e; } out.push(...r.data); });
   }
   return out;
 }
@@ -353,15 +360,16 @@ async function load(silent=false){
   if (!silent) toast('Carregando dados…', false, true);
   try {
     if (!sb) throw new Error('Biblioteca do Supabase não carregou.');
-    const nomes = ['cob_pessoas','cob_config','cob_requisicoes','cob_processos','cob_os','cob_historico','cob_revogacoes','cob_cargas'];
-    const [pes,cfg,req,proc,os,hist,rev,car] = await Promise.all(nomes.map(fetchAll));
-    Object.assign(S, {pessoas:pes, req, proc, os, hist, rev, cargas:car.sort((a,b)=>b.id-a.id)});
-    S.config = Object.fromEntries(cfg.map(c=>[c.chave, c.valor]));
-    try { S.snaps = await fetchAll('cob_snapshots'); } catch (e) { S.snaps = []; console.warn('cob_snapshots indisponível — rode o schema.sql mais recente', e); }
-    document.getElementById('alert').innerHTML = '';
+    // cada tabela é lida separadamente: uma falha não derruba as outras e o aviso diz qual foi
+    const nomes = ['cob_pessoas','cob_config','cob_requisicoes','cob_processos','cob_os','cob_historico','cob_revogacoes','cob_cargas','cob_snapshots'];
+    const res = await Promise.allSettled(nomes.map(fetchAll)), d = {}, falhas = [];
+    res.forEach((r,i) => { if (r.status === 'fulfilled') d[nomes[i]] = r.value; else { d[nomes[i]] = []; falhas.push([nomes[i], r.reason]); console.error(nomes[i], r.reason); } });
+    Object.assign(S, {pessoas:d.cob_pessoas, req:d.cob_requisicoes, proc:d.cob_processos, os:d.cob_os, hist:d.cob_historico, rev:d.cob_revogacoes, cargas:d.cob_cargas.sort((a,b)=>b.id-a.id), snaps:d.cob_snapshots});
+    S.config = Object.fromEntries(d.cob_config.map(c=>[c.chave, c.valor]));
+    document.getElementById('alert').innerHTML = falhas.length ? `<div class="note bad"><b>Não consegui ler ${falhas.length===1?'uma tabela':falhas.length+' tabelas'} do Supabase.</b> Rode o <b>schema.sql</b> mais recente no SQL Editor e recarregue a página.<ul style="margin:8px 0 0;padding-left:18px">${falhas.map(([t,e])=>`<li><b>${esc(t)}</b>: ${esc(erroTxt(e))}</li>`).join('')}</ul></div>` : '';
   } catch (e) {
     console.error(e);
-    document.getElementById('alert').innerHTML = `<div class="note bad"><b>Não consegui ler o Supabase.</b> Confira se o arquivo <b>schema.sql</b> (versão mais recente) já foi executado no SQL Editor do projeto. Detalhe: ${esc(e.message||e)}</div>`;
+    document.getElementById('alert').innerHTML = `<div class="note bad"><b>Não consegui ler o Supabase.</b> Detalhe: ${esc(erroTxt(e))}</div>`;
   }
   prep(); fillSup(); render();
   if (!silent) hideToast();
@@ -698,7 +706,7 @@ async function savePessoas(){
     if (up.length) { const {error} = await sb.from('cob_pessoas').upsert(up, {onConflict:'id'}); if (error) throw error; }
     if (ins.length) { const {error} = await sb.from('cob_pessoas').insert(ins); if (error) throw error; }
     await load(true); toast('✔ Equipe salva');
-  } catch (e) { toast('Erro ao salvar: '+(e.message||e), true); }
+  } catch (e) { toast('Erro ao salvar: '+erroTxt(e), true); }
 }
 
 /* ===================== Importação ===================== */
@@ -923,7 +931,7 @@ async function confirmMapping(){
     closeModal(); toast('Atualizando a plataforma…', false, true); await load(true);
     if (P.tipo==='req' || P.tipo==='proc') await salvarSnap(P.tipo==='req' ? dataRef : refDate());
     toast(`✔ ${TIPOS[P.tipo].t}: ${fmtI(res.novas)} novos, ${fmtI(res.alteradas)} alterados, ${fmtI(res.iguais)} sem mudança.`);
-  } catch (e) { console.error(e); btn.disabled = false; btn.textContent = 'Importar'; toast('Erro na importação: '+(e.message||e), true); }
+  } catch (e) { console.error(e); btn.disabled = false; btn.textContent = 'Importar'; toast('Erro na importação: '+erroTxt(e), true); }
 }
 
 /* ===================== Exportações ===================== */
