@@ -160,7 +160,7 @@ body.bloq #login{display:flex}
 
 <script>
 /* ===================== Conexão ===================== */
-const VERSAO = '2026.11.08-a';
+const VERSAO = '2026.11.08-b';
 const SB_URL = 'https://ouhaiffxwxucmesprbjr.supabase.co';
 const SB_KEY = 'sb_publishable_pD8U39Nl4xhC-95t-1FQvw_giOSi7le';
 let sb = null;
@@ -677,9 +677,23 @@ function vBase(){
   ${tableBlock('base','Requisições', COLS.base(), R.sort((a,b)=>String(b.data_requisicao||'').localeCompare(String(a.data_requisicao||''))), 'Base_mae')}`);
 }
 
+async function carregaUso(){
+  const el = document.getElementById('uso'); if (!el || !sb) return;
+  const { data, error } = await sb.rpc('cob_uso');
+  const corpo = document.getElementById('usoCorpo'); if (!corpo) return;
+  if (error || !data) { corpo.textContent = 'Não foi possível consultar o uso (rode o schema.sql mais recente).'; return; }
+  const LIM = 500, pctUso = Math.min(100, data.total_mb / LIM * 100), cor = pctUso > 80 ? 'var(--bad)' : pctUso > 60 ? 'var(--warn)' : 'var(--ok)';
+  const cob = (data.tabelas||[]).filter(t => t.tabela.startsWith('cob_')), mb = cob.reduce((a,t)=>a+ +t.mb, 0), mortas = cob.reduce((a,t)=>a+ +t.mortas, 0);
+  corpo.outerHTML = `<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><b>${fmtN(data.total_mb)} MB de ${LIM} MB</b><span class="desc" style="margin:0">${fmtN(pctUso)}% · plataforma: ${fmtN(mb)} MB · resto: sistema do Supabase e outros</span></div>
+  <div style="height:10px;background:var(--baby2);border-radius:10px;overflow:hidden"><div style="height:100%;width:${pctUso}%;background:${cor}"></div></div>
+  ${mortas > 20000 ? `<div class="note" style="margin:12px 0 0">Há ${fmtI(mortas)} linhas antigas aguardando limpeza (sobras de importações). Rode o <b>manutencao_banco.sql</b> no SQL Editor para liberar o espaço.</div>` : ''}
+  <div class="tbl-wrap" style="margin-top:12px;max-height:260px"><table><thead><tr><th>Tabela</th><th>Tamanho</th><th>Linhas</th><th>Linhas antigas</th></tr></thead><tbody>${cob.map(t=>`<tr><td>${esc(t.tabela)}</td><td>${fmtN(t.mb)} MB</td><td>${fmtI(t.linhas)}</td><td>${fmtI(t.mortas)}</td></tr>`).join('')}</tbody></table></div>`;
+}
 function vCargas(){
+  setTimeout(carregaUso, 0);
   V(`<div class="card">${cardH('Carregar bases','Envie as planilhas como saem dos sistemas. A plataforma reconhece as colunas sozinha; você só confere e clica em Importar. Só o que mudou é gravado.')}
   <div class="uploads"><div class="up" style="border-color:#f0c96a;background:#fffdf6"><h4>Modelo do PPT</h4><p>Apresentação da reunião semanal (.pptx). A plataforma troca só os gráficos, datas e percentuais. ${S.modelo?'<b>Modelo carregado.</b>':'Também pode ficar no site como <b>modelo.pptx</b>.'}</p><input type="file" accept=".pptx" onchange="definirModelo(this)"></div>${Object.entries(TIPOS).map(([k,t])=>`<div class="up"><h4>${esc(t.t)}</h4><p>${esc(t.d)}</p><label>Data de referência</label><br><input type="date" id="dt_${k}" value="${today()}"><input type="file" accept=".xlsx,.xls,.xlsm,.csv,.txt" onchange="onFile('${k}',this)"></div>`).join('')}</div></div>
+  <div class="card" id="uso">${cardH('Uso do banco de dados','Plano gratuito do Supabase: 500 MB. Acima disso o projeto fica só leitura.')}<div class="desc" id="usoCorpo">Consultando…</div></div>
   ${tableBlock('cargas','Histórico de cargas', [col('Data/hora','',r=>fmtDT(r.criado_em)), col('Base','',r=>TIPOS[r.tipo]?.t||r.tipo), col('Arquivo','arquivo'), colD('Referência','data_referencia'), col('Linhas','linhas'), col('Novos','novas'), col('Alterados','alteradas')], S.cargas, 'Historico_cargas')}`);
 }
 
@@ -917,10 +931,11 @@ async function confirmMapping(){
       const hist = res.changed.filter(([r,o]) => o ? ['status','usuario_responsavel','grupo'].some(k=>String(o[k]??'')!==String(r[k]??'')) : !fechado(r.grupo))
         .map(([r,o]) => ({chave:r.chave, data_evento:dataRef, status_anterior:o?.status??null, status_novo:r.status, usuario_anterior:o?.usuario_responsavel??null, usuario_novo:r.usuario_responsavel, grupo_anterior:o?.grupo??null, grupo_novo:r.grupo}));
       const carga = await novaCarga(P.tipo, P.fname, dataRef, recs.length, res.novas, res.alteradas);
+      // histórico antes das requisições: se a carga cair no meio, repetir não perde nem duplica mudanças
+      hist.forEach(h => h.carga_id = carga.id);
+      await batches('cob_historico', hist, 'chave,data_evento', 'upsert');
       res.up.forEach(r => r.atualizado_em = now);
       await batches('cob_requisicoes', res.up, 'chave', 'upsert');
-      hist.forEach(h => h.carga_id = carga.id);
-      await batches('cob_historico', hist, null, 'insert');
     } else {
       const cfg = { proc:['cob_processos','chave',S.proc], rev:['cob_revogacoes','chave',S.rev], scae:['cob_os','os_id',S.os], field:['cob_os','os_id',S.os] }[P.tipo];
       res = diff(new Map(cfg[2].map(r=>[r[cfg[1]], r])), recs, cfg[1], KEYS[P.tipo]);
