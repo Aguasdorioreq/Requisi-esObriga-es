@@ -142,6 +142,7 @@ body.bloq #login{display:flex}
       <label>Tipo</label><select id="fTipo" onchange="setFilt()"><option value="">Todos</option><option value="dec">Decisões</option><option value="rio">Decisões – [RIO]</option></select>
       <label>Com quem</label><select id="fGrupo" onchange="setFilt()"><option value="">Todos</option><option value="int">Time interno (G1 + G2)</option><option>Grupo 1</option><option>Grupo 2</option><option>Escritório</option><option>Em requisição</option><option>Finalizada</option><option>Encerrada</option><option>Outros</option></select>
       <label>Processo</label><select id="fSit" onchange="setFilt()"></select>
+      <label>Status</label><select id="fStatus" onchange="setFilt()"></select>
       <label>Responsável</label><select id="fResp" onchange="setFilt()" style="max-width:200px"></select>
       <label>Requisições de</label><input type="date" id="fDe" onchange="setFilt()">
       <label>até</label><input type="date" id="fAte" onchange="setFilt()">
@@ -162,7 +163,7 @@ body.bloq #login{display:flex}
 
 <script>
 /* ===================== Conexão ===================== */
-const VERSAO = '2026.11.08-d';
+const VERSAO = '2026.11.11-a';
 const SB_URL = 'https://ouhaiffxwxucmesprbjr.supabase.co';
 const SB_KEY = 'sb_publishable_pD8U39Nl4xhC-95t-1FQvw_giOSi7le';
 let sb = null;
@@ -377,8 +378,14 @@ async function load(silent=false){
   prep(); fillSup(); render();
   if (!silent) hideToast();
 }
+// Só entram nos relatórios os tipos "Obrigação de Fazer - Decisões" e "... - Decisões - [RIO]";
+// tudo que tiver liminar ou tutela no tipo ou no título fica fora (inclusive na Visão geral e no PPT)
+const TIPOS_OK = new Set(['obrigacao de fazer decisoes', 'obrigacao de fazer decisoes rio']);
+const ehLiminar = r => /liminar|tutela/.test(norm(r.titulo) + ' ' + norm(r.tipo_requisicao));
+const reqPermitida = r => !ehLiminar(r) && (!r.tipo_requisicao || TIPOS_OK.has(norm(r.tipo_requisicao)));
 function prep(){
-  prepPessoas();
+  prepPessoas(); prepMapaSup();
+  const antes = S.req.length; S.req = S.req.filter(reqPermitida); S.reqFora = (S.reqFora && antes === S.req.length) ? S.reqFora : antes - S.req.length;
   S.osMap = new Map(S.os.map(o=>[o.os_id, o]));
   S.procMap = new Map(S.proc.map(p=>[p.chave, p]));
   S.histBy = groupBy(S.hist, h=>h.chave);
@@ -388,14 +395,15 @@ function prep(){
   S.rev.forEach(v => { v._fin = v.data_finalizacao; v._diasFin = v.data_entrada && v.data_finalizacao ? daysDiff(v.data_entrada, v.data_finalizacao) : null; });
   const ult = t => S.cargas.find(c=>c.tipo===t);
   const partes = Object.keys(TIPOS).map(t => { const c = ult(t); return `${esc(TIPOS[t].curto)}: <b>${c ? esc(fmtDT(c.criado_em)) : '—'}</b>`; });
-  document.getElementById('meta').innerHTML = 'Última carga · ' + partes.join(' &nbsp;·&nbsp; ') + ` &nbsp;·&nbsp; <span style="opacity:.7">versão ${VERSAO}</span>`;
+  S.os.forEach(o => o._supLoc = supLocal(o));
+  document.getElementById('meta').innerHTML = 'Última carga · ' + partes.join(' &nbsp;·&nbsp; ') + (S.reqFora ? ` &nbsp;·&nbsp; ${fmtI(S.reqFora)} de liminar/tutela ou de outro tipo fora dos relatórios` : '') + ` &nbsp;·&nbsp; <span style="opacity:.7">versão ${VERSAO}</span>`;
 }
-const FILTROS = ['fSup','fEsc','fTipo','fGrupo','fSit','fResp','fDe','fAte'], FKEY = {fSup:'sup', fEsc:'esc', fTipo:'tipo', fGrupo:'grupo', fSit:'sit', fResp:'resp', fDe:'de', fAte:'ate'};
+const FILTROS = ['fSup','fEsc','fTipo','fGrupo','fSit','fStatus','fResp','fDe','fAte'], FKEY = {fSup:'sup', fEsc:'esc', fTipo:'tipo', fGrupo:'grupo', fSit:'sit', fStatus:'status', fResp:'resp', fDe:'de', fAte:'ate'};
 function opcoes(id, valores, rotulo='Todos'){ const el = document.getElementById(id); if (!el) return;
   el.innerHTML = `<option value="">${rotulo}</option>` + valores.map(([k,v])=>`<option value="${esc(k)}">${esc(v)}</option>`).join(''); el.value = S.filt[FKEY[id]] || ''; }
 function fillSup(){ // preenche as listas dos filtros com o que existe na base
   const uniq = f => { const m = new Map(); S.req.forEach(r => { const v = f(r); const n = norm(v); if (n && !m.has(n)) m.set(n, v); }); return [...m].sort((a,b)=>a[1].localeCompare(b[1])); };
-  opcoes('fSup', uniq(r=>r._sup), 'Todas'); opcoes('fEsc', uniq(r=>r._esc)); opcoes('fSit', uniq(r=>r._sit));
+  opcoes('fSup', uniq(r=>r._sup), 'Todas'); opcoes('fEsc', uniq(r=>r._esc)); opcoes('fSit', uniq(r=>r._sit)); opcoes('fStatus', uniq(r=>r.status));
   const resp = new Map(); S.req.forEach(r => { if (['Finalizada','Encerrada'].includes(r._grupo) || !r._resp || r._resp==='—') return; resp.set(r._resp, (resp.get(r._resp)||0)+1); });
   opcoes('fResp', [...resp].sort((a,b)=>a[0].localeCompare(b[0])).map(([k,n])=>[k, `${k} (${n})`]));
 }
@@ -404,16 +412,16 @@ function clearFilt(){ FILTROS.forEach(id => document.getElementById(id).value = 
 const tipoReq = r => /\brio\b/.test(norm(r.tipo_requisicao)) ? 'rio' : 'dec';
 function getReqs(){
   const f = S.filt;
-  return S.req.filter(r => (!f.sup || norm(r._sup)===f.sup) && (!f.esc || norm(r._esc)===f.esc) && (!f.sit || norm(r._sit)===f.sit)
+  return S.req.filter(r => (!f.sup || norm(r._sup)===f.sup) && (!f.esc || norm(r._esc)===f.esc) && (!f.sit || norm(r._sit)===f.sit) && (!f.status || norm(r.status)===f.status)
     && (!f.tipo || tipoReq(r)===f.tipo) && (!f.resp || r._resp===f.resp)
     && (!f.grupo || (f.grupo==='int' ? ['Grupo 1','Grupo 2'].includes(r._grupo) : r._grupo===f.grupo))
     && (!f.de || (r.data_requisicao && r.data_requisicao>=f.de)) && (!f.ate || (r.data_requisicao && r.data_requisicao<=f.ate)));
 }
-const filtrosNaoPeriodo = () => ['sup','esc','tipo','grupo','sit','resp'].some(k => S.filt[k]);
+const filtrosNaoPeriodo = () => ['sup','esc','tipo','grupo','sit','status','resp'].some(k => S.filt[k]);
 function periodoTxt(){
   const f = S.filt; let t = f.de||f.ate ? `Requisições de ${f.de?fmt(f.de):'início'} a ${f.ate?fmt(f.ate):'hoje'}` : 'Todo o período';
   const txt = id => document.getElementById(id)?.selectedOptions[0]?.text || '';
-  [['sup','fSup'],['esc','fEsc'],['tipo','fTipo'],['grupo','fGrupo'],['sit','fSit'],['resp','fResp']].forEach(([k,id]) => { if (f[k]) t += ' · ' + txt(id).replace(/ \(\d+\)$/,''); });
+  [['sup','fSup'],['esc','fEsc'],['tipo','fTipo'],['grupo','fGrupo'],['sit','fSit'],['status','fStatus'],['resp','fResp']].forEach(([k,id]) => { if (f[k]) t += ' · ' + txt(id).replace(/ \(\d+\)$/,''); });
   return t;
 }
 
@@ -629,7 +637,7 @@ function vTratamento(){
   const cT = () => [...COLS.tri()];
   V(`${semDados()}${!D.A.length?`<div class="note">Nenhuma OS do SCAE foi associada a membros do Grupo 1. Confira em <b>Equipe &amp; regras</b> se o nome (ou apelido) bate com a coluna “Usuário que abriu a OS” e se a base SCAE foi carregada.</div>`:''}
   <div class="kpis">${kpi('OS abertas hoje',t.dia,'Grupo 1 · SCAE','navy')}${kpi('OS na semana',t.sem,'segunda até hoje')}${kpi('OS no mês',t.mes,MESES[+today().slice(5,7)-1]+'/'+today().slice(2,4))}${kpi('OS no ano',t.ano,today().slice(0,4))}
-  ${kpi('Solicitação de valores',D.V.length,`${D.V.filter(r=>!r.data_abertura_os1).length} ainda sem OS 1`,'warn')}${kpi('Triagem (sem liminar)',D.T.length,'aguardando aprovação')}${kpi('Liminares em triagem',D.TL.length,'tratadas à parte','bad')}${kpi('Roteiro de escape',D.RE.length,'requisições sinalizadas')}</div>
+  ${kpi('Solicitação de valores',D.V.length,`${D.V.filter(r=>!r.data_abertura_os1).length} ainda sem OS 1`,'warn')}${kpi('Triagem',D.T.length,'aguardando aprovação')}${kpi('Roteiro de escape',D.RE.length,'requisições sinalizadas')}</div>
 
   <div class="card">${cardH('OS abertas por membro do Grupo 1','Dados do SCAE (“Usuário que abriu a OS” × data do pedido). Empilhado por membro.', segN('g1',[['dia','Dia'],['semana','Semana'],['mes','Mês']]))}<div class="chart-box"><canvas id="cG1"></canvas></div></div>
   <div class="grid2"><div class="card">${cardH('Tipos de OS mais abertos','Top 10 pelo total do Grupo 1.')}<div class="chart-box"><canvas id="cG1T"></canvas></div></div>
@@ -643,8 +651,7 @@ function vTratamento(){
   <div class="grid2">${tableBlock('valp','Solicitação de valores por '+{dia:'dia',semana:'semana',mes:'mês',ano:'ano'}[gv], [col('Período','label'), col('Requisições','ent'), col('OS 1 abertas','os1'), col('Tempo médio de retorno (dias)','tempoTxt'), col('Sem OS 1 (da safra)','pend')], vp.slice().reverse(), 'Solicitacao_valores_por_periodo')}
   ${tableBlock('vald','Solicitação de valores · requisições', cV, vdet, 'Solicitacao_valores')}</div>
 
-  ${tableBlock('tri','Triagem · aguardando aprovação (sem liminares)', cT(), D.T, 'Triagem_Grupo1', 'Acordo e Revogação vão para a responsável da categoria; as demais são divididas pela menor carga. Liminares ficam no quadro abaixo.')}
-  ${tableBlock('trl','Triagem · liminares', cT(), D.TL, 'Triagem_Liminares', 'Requisições de liminar/tutela aguardando aprovação, separadas da triagem geral.')}
+  ${tableBlock('tri','Triagem · aguardando aprovação', cT(), D.T, 'Triagem_Grupo1', 'Acordo e Revogação vão para a responsável da categoria; as demais são divididas pela menor carga. Liminares e tutelas não entram nos relatórios.')}
   ${tableBlock('rot','Roteiro de escape', [col('Nº requisição','numero_requisicao'), col('Título','titulo'), col('SUP','_sup'), colD('Data da requisição','data_requisicao'), col('Status','status'), col('Grupo','_grupo',null,r=>bG(r._grupo)), col('Responsável atual','_resp'), col('Onde aparece','_onde')], D.RE, 'Roteiro_de_escape', 'Requisições em que “roteiro de escape” aparece no título, status, causa raiz, histórico do processo ou teor das OS.')}
   ${tableBlock('trat','Requisição × tratamento pelo Grupo 1', COLS.trat(), det, 'Tratamento_Grupo1')}`);
 
@@ -686,6 +693,37 @@ function vEscritorio(){
   chart('cEsc', barCfg(graf.map(x=>x.nome.length>40?x.nome.slice(0,39)+'…':x.nome), [['Aguardando execução',graf.map(x=>x.exec),C.navy],['Aguardando informações',graf.map(x=>x.info),C.sky],['Executada',graf.map(x=>x.executada),C.pastel]], {horizontal:true, stacked:true}));
 }
 
+/* ---------- Superintendência por município e bairro (SCAE e Field não trazem a SUP) ---------- */
+const MAPA_PADRAO = "[Baixada 1]\nBELFORD ROXO\nDUQUE DE CAXIAS\nMAGÉ\nJARDIM PRIMAVERA\nSÃO JOÃO DE MERITI\n\n[Baixada 2]\nNOVA IGUAÇU\nQUEIMADOS\nJAPERO\nMESQUITA\nNILOPOLIS\n\n[Rio - Norte]\nPAVUNA\nABOLICAO\nABOLICÃO\nABOLIÇÃO\nACARI\nAGUA SANTA\nANCHIETA\nAPOLOII\nBANCARIOS\nBARROS FILHO\nBENTO RIBEIRO\nBONSUCESSO\nBRAS DE PINA\nBRAZ DE PINA\nCACHAMBI\nCACUIA\nCAMPINHO\nCASCADURA\nCAVALCANTE\nCAVALCANTI\nCIDADE UNIVERSITARIA\nCOCOTA\nCOELHO NETO\nCOLEGIO\nCOMPLEXO DO ALEMAO\nCORDOVIL\nCOSTA BARROS\nDEL CASTILHO\nDEODORO\nENCANTADO\nENGENHEIRO LEAL\nENGENHO DA RAINHA\nENGENHO DE DENTRO\nENGENHO LEAL\nENGENHO NOVO\nFREGUESIA\nFREGUESIA (ILHA DO GOVERNADOR)\nFREGUESIA (ILHA)\nFREGUESIA (JACAREPAGUA)\nGALEAO\nGUADALUPE\nHIGIENOPOLIS\nHONORIO GURGEL\nILHA DO FUNDAO\nILHA DO GOVERNADOR\nILHA DO GOVRNADOR\nILHAS\nINHAUMA\nIRAJA\nIRAJÁ\nITACOLOMI\nJACARE\nJACAREZINHO\nJARDIM AMERICA\nJARDIM CARIOCA\nJARDIM GUANABARA\nLINS DE VASCONCELOS\nLINS VASCONCELOS\nMADUREIRA\nMANGUINHOS\nMARE\nMARECHAL HERMES\nMARIA DA GRACA\nMEIER\nMONERO\nNOSSA SENHORA GRACAS\nOLARIA\nOSVALDO CRUZ\nOSWALDO CRUZ\nPARADA DE LUCAS\nPARQUE ANCHIETA\nPARQUE COLOMBIA\nPARQUE COLUMBIA\nPENHA\nPENHA CIRCULAR\nPIEDADE\nPILARES\nPITANGUEIRAS\nPORTUGUESA\nPRACA SECA\nPRAÇA SECA\nPRAIA DA BANDEIRA\nQUINTINO\nQUINTINO BOCAIUVA\nRAMOS\nRIACHUELO\nRIBEIRA\nRICARDO ALBUQUERQUE\nRICARDO DE ALBUQUERQUE\nROCHA\nROCHA MIRANDA\nROQUETE PINTO\nSAMPAIO\nSAO FRANCISCO XAVIER\nTAUA\nTERRA NOVA\nTODOS OS SANTOS\nTOMAS COELHO\nTRIAGEM\nTUBIACANGA\nTURIACU\nVAZ LOBO\nVICENTE CARVALHO\nVICENTE DE CARVALHO\nVIGARIO GERAL\nVILA DA PENHA\nVILA KOSMOS\nVILA VALQUEIRE\nVISTA ALEGRE\nZUMBI\n\n[Rio - Centro / Sul]\nALDEIA CAMPISTA\nALTO DA BOA VISTA\nANDARAI\nBAIRRO DE FATIMA\nBENFICA\nBOTAFOGO\nCAJU\nCASTELO\nCATETE\nCATUMBI\nCENTRO\nCIDADE NOVA\nCINELANDIA\nCOPACABANA\nCOSME VELHO\nESTACIO\nESTRADA DAS CANOAS\nFLAMENGO\nGAMBOA\nGAVEA\nGLORIA\nGRAJAU\nHUMAITA\nHUMAITÁ\nIPANEMA\nJARDIM BOTANICO\nJOA\nLAGOA\nLAPA\nLARANJEIRAS\nLEBLON\nLEME\nMANGUEIRA\nMARACANA\nPRACA DA BANDEIRA\nRIO COMPRIDO\nROCINHA\nSANTA TERESA\nSANTO CRISTO\nSAO CONRADO\nSAO CRISTOVAO\nSAUDE\nTIJUCA\nURCA\nUSINA\nVASCO DA GAMA\nVIDIGAL\nVILA ISABEL\n\n[Regional - Leste]\nITABORAI\nSÃO GONÇALO\nMARICÁ\nSAQUEREMA\nTANGUA\nILHA DE PAQUETÁ\nBARRA NOVA\n\n[Interior - Lagos]\nAPERIBÉ\nCASEMIRO DE ABREU\nCANTAGALO\nCAMBUCI\nCACHOEIRAS DE MACACU\nCORDEIRO\nITAOCARA\nRIO BONITO\nS.FCO.DO ITABAPOANA\nS.SEBASTIAO DO ALTO\nDUAS BARRAS\nMIRACEMA\n\n[Comunidade]\nPAVUNA - COMPLEXO DO CHAPADÃO\nBABILONIA-CHAPEU MANGUEIRA\nBAIXA DO SAPATEIRO\nBEIJAMIN CONSTANT\nBENFICA - ARARA\nCANTAGALO\nCHACARA DO CEU\nCOMPLEXO DA MARE\nCOMPLEXO DA PENHA\nCOMPLEXO DO ALEMAO\nCOMPLEXO DO ALEMÃO\nCOMPLEXO DOS CABRITOS\nCONJUNTO ESPERANCA\nCONJUNTO PINHEIRO\nDENDE\nFAZENDA BOTAFOGO\nGUARABU\nMARCILIO DIAS - KELSON S\nMORRO DO TIMBAU\nNOVA HOLANDA\nNOVA MARE\nPARQUE DA CIDADE\nPARQUE ECOLOGICO\nPARQUE MARE\nPARQUE RUBENS VAZ\nPARQUE UNIAO\nPAVAO-PAVAOZINHO\nPQ. PORTUGUESA DA ILHA\nPRAIA DE RAMOS\nSANTA MARTA\nSAO CRISTOVAO - B. DO VASCO\nSAO CRISTOVAO - COM.MANGUEIRA\nVASCO DA GAMA - BAR. DO VASCO\nVILA DO JOAO\nVILA DOS PINHEIROS";
+const PART_LOC = new Set(['da','das','de','do','dos','e']);
+const locKey = t => norm(t).split(' ').filter(w=>w && !PART_LOC.has(w)).join(' ');
+function lerMapa(txt){ const out = []; let cur = null;
+  String(txt||'').split(/\r?\n/).forEach(l => { l = l.trim(); if (!l) return; const h = l.match(/^\[(.+)\]$/); if (h) { cur = {sup:h[1].trim(), nomes:[]}; out.push(cur); return; } if (cur) l.split(';').map(x=>x.trim()).filter(Boolean).forEach(x=>cur.nomes.push(x)); });
+  return out; }
+function prepMapaSup(){
+  const blocos = lerMapa((S.config.mapa_sup && S.config.mapa_sup.texto) || MAPA_PADRAO), doRio = b => /\brio\b|comunidad/.test(norm(b.sup));
+  const monta = ordem => { const m = new Map(); ordem.forEach(b => b.nomes.forEach(n => { const k = locKey(n); if (k) m.set(k, b.sup); })); return m; };
+  // município fora do Rio: blocos de municípios têm prioridade (ex.: CANTAGALO cidade = Interior - Lagos)
+  S.mapaCid = monta([...blocos.filter(doRio), ...blocos.filter(b=>!doRio(b))]);
+  // bairro do Rio: Comunidade tem prioridade, depois os blocos do Rio
+  S.mapaBai = monta([...blocos.filter(b=>!doRio(b)), ...blocos.filter(b=>doRio(b) && !/comunidad/.test(norm(b.sup))), ...blocos.filter(b=>/comunidad/.test(norm(b.sup)))]);
+  S.supMemo = new Map();
+}
+function dist1(a, b){ // true se a e b diferem em no máximo 1 letra (troca, falta ou sobra)
+  if (Math.abs(a.length-b.length) > 1) return false; let i = 0, j = 0, d = 0;
+  while (i < a.length && j < b.length) { if (a[i] === b[j]) { i++; j++; continue; } if (++d > 1) return false; if (a.length > b.length) i++; else if (b.length > a.length) j++; else { i++; j++; } }
+  return d + (a.length - i) + (b.length - j) <= 1; }
+function achaLocal(mapa, t){
+  const k = locKey(t); if (!k) return null; if (mapa.has(k)) return mapa.get(k);
+  for (const [n, sup] of mapa) if ((k.length >= 6 && dist1(k, n)) || k.endsWith(' '+n) || n.endsWith(' '+k)) return sup; // erros de digitação e "ILHA DE PAQUETÁ" × "PAQUETÁ"
+  return null; }
+function supLocal(o){
+  const cid = o.localidade || o.field_cidade || '', bai = o.bairro || o.field_bairro || '', ch = cid + '|' + bai;
+  if (S.supMemo.has(ch)) return S.supMemo.get(ch);
+  const rio = /^rio de janeiro/.test(norm(cid));
+  const sup = rio ? achaLocal(S.mapaBai, bai) : (achaLocal(S.mapaCid, cid) || (cid ? null : achaLocal(S.mapaBai, bai)) || achaLocal(S.mapaBai, bai));
+  S.supMemo.set(ch, sup); return sup; }
+
 /* ---------- Scae × Field ---------- */
 // status do Field na ordem do fluxo ("Agendado para 30/10" vira "Agendado", para não abrir uma coluna por dia)
 const SF_ST = ['Não agendado','Agendado','Em rota','Iniciada','Paralisada','Encerrada com ocorrência','Cancelada','Finalizada'];
@@ -696,10 +734,15 @@ const ocC = o => { const t = cleanTxt(String(o.ocorrencia||'')).replace(/^\d+\s*
 const ocExec = oc => norm(oc) === 'executado';
 function sfRows(){
   const reqOS = new Map(); S.req.forEach(r => r._osIds.forEach(i => { if (!reqOS.has(i)) reqOS.set(i, r); }));
-  const f = S.filt, set = (filtrosNaoPeriodo() || f.de || f.ate) ? new Set(getReqs().map(r=>r.chave)) : null, out = [];
+  // SUP pelo município/bairro da OS; se não achar, usa a SUP da requisição ligada a ela.
+  // O filtro de SUP vale direto sobre essa SUP; os demais filtros passam pela requisição ligada à OS.
+  const f = S.filt, outros = ['esc','tipo','grupo','sit','status','resp'].some(k => f[k]) || f.de || f.ate;
+  let set = null, out = [];
+  if (outros) { const sv = S.filt; S.filt = {...f, sup:''}; set = new Set(getReqs().map(r=>r.chave)); S.filt = sv; } // SUP fica de fora aqui: é aplicada pela SUP da OS
   S.os.forEach(o => { const r = reqOS.get(o.os_id); if (set && !(r && set.has(r.chave))) return;
     const d = String(o.field_data || o.data_encerramento || o.data_abertura || '').slice(0,10); if (!d) return;
-    out.push({os:o.numero_os, sup:r?._sup||'Sem SUP', d, st:stFieldC(o), oc:ocC(o), tipo:o.tipo_os||'(sem descrição)'}); });
+    const sup = o._supLoc || r?._sup || 'Sem SUP'; if (f.sup && norm(sup) !== f.sup) return;
+    out.push({os:o.numero_os, sup, viaLocal:!!o._supLoc, cid:o.localidade||o.field_cidade||'', bai:o.bairro||o.field_bairro||'', d, st:stFieldC(o), oc:ocC(o), tipo:o.tipo_os||'(sem descrição)'}); });
   return out;
 }
 function vScaeField(){
@@ -734,6 +777,9 @@ function vScaeField(){
   <div class="card">${cardH('Ocorrências por período','Executado, as 5 ocorrências mais frequentes e as demais somadas. A tabela abaixo traz todos os tipos.', segN('sf',[['semana','Semanal'],['mes','Mensal']]))}<div class="chart-box"><canvas id="cSfO"></canvas></div></div>
   ${tableBlock('sfo','Quantidade de cada ocorrência · '+(g==='mes'?'mensal':'semanal'), [col('Período','periodo'), ...ocCols.map(c=>col(c,c)), col('Total','tot')], oc, 'Ocorrencias_por_periodo')}
   ${tableBlock('sfp','Status da atividade por superintendência · '+(g==='mes'?'mensal':'semanal'), [col('Período','periodo'), col('Superintendência','sup'), ...stCols.map(c=>col(c,c)), col('Total','tot')], per, 'Status_por_SUP', 'Use os filtros das colunas para escolher a superintendência ou o período.')}
+  ${(() => { const sem = [...groupBy(A.filter(x=>!x.viaLocal), x=>x.cid+'|'+x.bai)].map(([k,a])=>({cid:a[0].cid||'(sem município)', bai:a[0].bai||'(sem bairro)', qtd:a.length, sup:a[0].sup})).sort((p,q)=>q.qtd-p.qtd);
+    return tableBlock('sfl','Locais sem superintendência na tabela de bairros', [col('Município','cid'), col('Bairro','bai'), col('OS','qtd'), col('SUP usada (da requisição)','sup')], sem, 'Locais_sem_SUP',
+      `${fmtI(A.filter(x=>x.viaLocal).length)} de ${fmtI(A.length)} OS com SUP pelo município/bairro. Inclua os locais abaixo em <b>Equipe &amp; regras → Superintendência por município e bairro</b>.${S.os.length && !S.os.some(o=>o.bairro||o.field_bairro) ? ' <b>As OS carregadas ainda não têm bairro: importe de novo as bases SCAE e Field.</b>' : ''}`); })()}
   ${tableBlock('sfs','Serviços gerados · maior para menor ofensor', [col('#','', r=>sv.indexOf(r)+1), col('Código','cod'), col('Descrição do serviço','desc'), col('Quantidade','qtd'), col('% do total','pct'), col('Com ocorrência (não executadas)','oc')], sv, 'Servicos_gerados')}`);
   const bar = (id, S_) => chart(id, barCfg(S_.sups.map(x=>x.length>28?x.slice(0,27)+'…':x), stCols.map(c=>[c, S_.data(c), cor[c]||C.sky]), {horizontal:true, stacked:true}));
   bar('cSfS', SW); bar('cSfM', SM);
@@ -815,11 +861,53 @@ function vRevogacoes(){
   chart('cRev', barCfg(keys.map(k=>glabel(k,g)), [['Entrantes',keys.map(k=>s.get(k)||0),C.navy],['Finalizadas',keys.map(k=>sf.get(k)||0),C.pastel]], {type:g==='dia'?'line':'bar'}));
 }
 
+const DIMS = { tipo:['Tipo de requisição', r=>r.tipo_requisicao||'—'], sup:['Superintendência', r=>r._sup||'Sem SUP'], esc:['Escritório', r=>r._esc||'Sem escritório'],
+  status:['Status', r=>r.status||'—'], sit:['Processo ativo/encerrado', r=>r._sit||'Sem informação'], grupo:['Com quem está', r=>r._grupo||'—'] };
+const curto = (x, n=34) => x.length > n ? x.slice(0, n-1)+'…' : x;
+function contar(a, modo){ return modo === 'proc' ? new Set(a.map(r=>r._proc||('req:'+r.chave))).size : a.length; }
+function filtrarPor(dim, valor){ // clique num gráfico da Base mãe = aplica o filtro do topo
+  const id = {sup:'fSup', esc:'fEsc', status:'fStatus', sit:'fSit', tipo:'fTipo'}[dim]; if (!id) return;
+  const el = document.getElementById(id), v = dim==='tipo' ? (/\brio\b/.test(norm(valor)) ? 'rio' : 'dec') : norm(valor);
+  if (![...el.options].some(o=>o.value===v)) return; el.value = v;
+  setTimeout(() => { setFilt(); window.scrollTo({top:0, behavior:'smooth'}); }, 0); // depois do clique: o gráfico é redesenhado sem quebrar o evento
+}
+function clicaFiltra(cfg, chaves, dim){ // clique em qualquer ponto da linha/coluna do gráfico filtra pelo item
+  const pega = (e, ch) => ch.getElementsAtEventForMode(e, ch.options.indexAxis === 'y' ? 'y' : 'x', {intersect:false}, false);
+  cfg.options.onClick = (e, els, ch) => { const p = pega(e, ch); if (p.length) filtrarPor(dim, chaves[p[0].index]); };
+  cfg.options.onHover = (e, els, ch) => { ch.canvas.style.cursor = pega(e, ch).length ? 'pointer' : 'default'; };
+  return cfg;
+}
 function vBase(){
-  const R = getReqs().filter(r=>!S.baseGrupo || r._grupo===S.baseGrupo);
+  const R = getReqs().filter(r=>!S.baseGrupo || r._grupo===S.baseGrupo), modo = S.baseConta || 'proc', pv = S.piv || (S.piv = {lin:'esc', col:'sit'});
   const gs = ['','Grupo 1','Grupo 2','Escritório','Em requisição','Finalizada','Encerrada','Outros'];
-  V(`${semDados()}<div class="card">${cardH('Base mãe','Requisições de obrigação de fazer (Decisões e [RIO]) cruzadas com a base de Processos (matrícula, SUP, CNJ, ativo/encerrado, escritório) e com as OSs do SCAE/Field.', `<div class="tools"><label class="desc" style="margin:0">Grupo</label><select onchange="S.baseGrupo=this.value;render()">${gs.map(g=>`<option value="${g}" ${g===S.baseGrupo?'selected':''}>${g||'Todos'}</option>`).join('')}</select></div>`)}</div>
+  const sits = [...groupBy(R, DIMS.sit[1])].sort((a,b)=>b[1].length-a[1].length).map(x=>x[0]), corSit = Object.fromEntries(sits.map((x,i)=>[x, blues(Math.max(sits.length,2))[i]]));
+  const nSit = rx => contar(R.filter(r=>rx.test(norm(r._sit))), modo);
+  const porDim = dim => { const m = groupBy(R, DIMS[dim][1]); return [...m].map(([k,a]) => ({k, a, tot:contar(a, modo)})).sort((p,q)=>q.tot-p.tot); };
+  const esc = porDim('esc');
+  // quadro (tabela dinâmica): linhas × colunas
+  const lin = porDim(pv.lin), colsV = porDim(pv.col).map(x=>x.k), topC = colsV.slice(0, 10), demais = colsV.length > 10;
+  const piv = lin.map(({k,a,tot}) => { const o = {_k:k, tot}; const g = groupBy(a, DIMS[pv.col][1]); topC.forEach(c => o[c] = contar(g.get(c)||[], modo)); if (demais) o._dem = contar(a.filter(r=>!topC.includes(DIMS[pv.col][1](r))), modo); return o; });
+  const selDim = (campo, atual) => `<select onchange="S.piv.${campo}=this.value;render()">${Object.entries(DIMS).map(([k,[l]])=>`<option value="${k}" ${k===atual?'selected':''}>${l}</option>`).join('')}</select>`;
+  const segC = `<div class="seg">${[['proc','Processos'],['req','Requisições']].map(([k,l])=>`<button class="${modo===k?'on':''}" onclick="S.baseConta='${k}';render()">${l}</button>`).join('')}</div>`;
+  const mini = (id, dim) => `<div class="card">${cardH(DIMS[dim][0], 'Clique numa barra para filtrar.')}<div class="chart-box" style="height:${Math.max(200, Math.min(porDim(dim).length, 12)*30+60)}px"><canvas id="${id}"></canvas></div></div>`;
+  V(`${semDados()}<div class="card">${cardH('Base mãe','Requisições de obrigação de fazer (Decisões e [RIO]), sem liminares e tutelas, cruzadas com a base de Processos e com as OSs do SCAE/Field. Os filtros do topo (SUP, escritório, tipo, status, processo…) valem para todo o painel.',
+    `<div class="tools"><label class="desc" style="margin:0">Contar</label>${segC}<label class="desc" style="margin:0 0 0 8px">Com quem</label><select onchange="S.baseGrupo=this.value;render()">${gs.map(g=>`<option value="${g}" ${g===S.baseGrupo?'selected':''}>${g||'Todos'}</option>`).join('')}</select></div>`)}</div>
+  <div class="kpis">${kpi(modo==='proc'?'Processos':'Requisições', contar(R, modo), periodoTxt(), 'navy')}${kpi('Ativos', nSit(/ativo/), '')}${kpi('Encerrados', nSit(/encerrad/), '')}${kpi('Baixa provisória', nSit(/baixa/), '')}${kpi('Sem informação', contar(R.filter(r=>!r._sit), modo), 'sem base de Processos')}${kpi('Escritórios', esc.filter(x=>x.k!=='Sem escritório').length, 'com '+(modo==='proc'?'processos':'requisições'))}</div>
+  <div class="card">${cardH('Processos ativos e encerrados por escritório', (modo==='proc'?'Processos (nº CNJ distinto)':'Requisições')+' por escritório (Advogado Interno da base de Processos). Clique numa barra para filtrar o escritório.')}<div class="chart-box" style="height:${Math.max(240, esc.length*34+60)}px"><canvas id="cBEsc"></canvas></div></div>
+  <div class="grid2">${mini('cBTipo','tipo')}${mini('cBSup','sup')}</div>
+  <div class="grid2">${mini('cBSt','status')}${mini('cBSit','sit')}</div>
+  <div class="card">${cardH('Quadro dinâmico', 'Escolha o que vai nas linhas e nas colunas. Use os filtros do topo e os filtros das colunas da tabela para recortar.', `<div class="tools"><label class="desc" style="margin:0">Linhas</label>${selDim('lin', pv.lin)}<label class="desc" style="margin:0 0 0 8px">Colunas</label>${selDim('col', pv.col)}</div>`)}</div>
+  ${tableBlock('piv', `${DIMS[pv.lin][0]} × ${DIMS[pv.col][0]} · ${modo==='proc'?'processos':'requisições'}`, [col(DIMS[pv.lin][0],'_k'), ...topC.map(c=>col(c, c)), ...(demais?[col('Demais','_dem')]:[]), col('Total','tot')], piv, 'Quadro_base_mae')}
   ${tableBlock('base','Requisições', COLS.base(), R.sort((a,b)=>String(b.data_requisicao||'').localeCompare(String(a.data_requisicao||''))), 'Base_mae')}`);
+  // gráfico por escritório: empilhado por situação do processo
+  const cfgE = barCfg(esc.map(x=>curto(x.k,40)), sits.map(st => [st, esc.map(x=>contar(x.a.filter(r=>DIMS.sit[1](r)===st), modo)), corSit[st]]), {horizontal:true, stacked:true});
+  chart('cBEsc', clicaFiltra(cfgE, esc.map(x=>x.k), 'esc'));
+  [['cBTipo','tipo'],['cBSup','sup'],['cBSt','status'],['cBSit','sit']].forEach(([id, dim]) => {
+    const d = porDim(dim).slice(0, 12), rot = x => curto(dim === 'tipo' ? x.k.replace(/^obriga\S+ de fazer\s*-\s*/i, '') : x.k), cfg = dim === 'sit'
+      ? barCfg(d.map(rot), [[modo==='proc'?'Processos':'Requisições', d.map(x=>x.tot), C.mid]], {horizontal:true})
+      : barCfg(d.map(rot), sits.map(st => [st, d.map(x=>contar(x.a.filter(r=>DIMS.sit[1](r)===st), modo)), corSit[st]]), {horizontal:true, stacked:true});
+    if (dim === 'sit') cfg.data.datasets[0].backgroundColor = d.map(x=>corSit[x.k]);
+    chart(id, clicaFiltra(cfg, d.map(x=>x.k), dim)); });
 }
 
 async function carregaUso(){
@@ -845,7 +933,21 @@ function vCargas(){
 function vConfig(){
   const rows = S.pessoas.slice().sort((a,b)=>(a.grupo+a.nome).localeCompare(b.grupo+b.nome));
   V(`<div class="card">${cardH('Equipe e regras de distribuição', `<b>Grupo 1</b>: a categoria define a sugestão na triagem. <b>Grupo 2</b>: informe as superintendências como aparecem no Projuris. <b>Apelidos</b>: outras grafias do nome (o SCAE corta o nome em 30 caracteres). Pessoas inativas deixam de ser reconhecidas, inclusive no filtro de OSs abertas pelo time.`, `<div class="tools"><button class="btn light sm" onclick="addPessoa()">+ Pessoa</button><button class="btn sm" onclick="savePessoas()">Salvar</button></div>`)}
-  <div class="tbl-wrap"><table id="tPes"><thead><tr><th>Nome</th><th>Grupo</th><th>Superintendências (G2)</th><th>Categoria (G1)</th><th>Apelidos</th><th>Ativo</th></tr></thead><tbody>${rows.map(rowPessoa).join('')}</tbody></table></div></div>`);
+  <div class="tbl-wrap"><table id="tPes"><thead><tr><th>Nome</th><th>Grupo</th><th>Superintendências (G2)</th><th>Categoria (G1)</th><th>Apelidos</th><th>Ativo</th></tr></thead><tbody>${rows.map(rowPessoa).join('')}</tbody></table></div></div>${cardMapa()}`);
+}
+function cardMapa(){
+  const txt = (S.config.mapa_sup && S.config.mapa_sup.texto) || MAPA_PADRAO, bl = lerMapa(txt);
+  return `<div class="card">${cardH('Superintendência por município e bairro', `Usada nas bases SCAE e Field, que não trazem a SUP. Fora do Rio vale o <b>município</b>; no Rio de Janeiro vale o <b>bairro</b> (Comunidade tem prioridade). Escreva o nome da SUP entre colchetes, como no Projuris, e um município ou bairro por linha. Acentos, maiúsculas e pequenos erros de digitação são ignorados.`,
+    `<div class="tools"><button class="btn light sm" onclick="if(confirm('Voltar para a lista original?')){document.getElementById('mapaTxt').value=MAPA_PADRAO}">Restaurar lista original</button><button class="btn sm" onclick="salvarMapa()">Salvar</button></div>`)}
+  <div class="desc" style="margin-bottom:8px">${bl.map(b=>`<b>${esc(b.sup)}</b>: ${b.nomes.length}`).join(' · ')}</div>
+  <textarea id="mapaTxt" spellcheck="false" style="width:100%;height:320px;font:12.5px/1.5 ui-monospace,Consolas,monospace;border:1px solid var(--line);border-radius:10px;padding:10px">${esc(txt)}</textarea></div>`;
+}
+async function salvarMapa(){
+  const texto = document.getElementById('mapaTxt').value, bl = lerMapa(texto);
+  if (!bl.length) return toast('Nenhuma superintendência encontrada. Use [Nome da SUP] antes da lista de locais.', true);
+  try { const {error} = await sb.from('cob_config').upsert({chave:'mapa_sup', valor:{texto}, atualizado_em:new Date().toISOString()}, {onConflict:'chave'}); if (error) throw error;
+    S.config.mapa_sup = {texto}; prep(); render(); toast(`✔ Tabela salva: ${bl.length} superintendências, ${bl.reduce((a,b)=>a+b.nomes.length,0)} locais.`); }
+  catch (e) { toast('Erro ao salvar: ' + erroTxt(e), true); }
 }
 function rowPessoa(p={}){
   const sel = (f, opts, v) => `<select data-f="${f}">${opts.map(o=>`<option value="${o}" ${o===(v||'')?'selected':''}>${o||'—'}</option>`).join('')}</select>`;
@@ -910,7 +1012,8 @@ const F_SCAE = [
   ['aberto_por','Usuário que abriu a OS',['usuario abriu o s','usuario abriu os','usuario emitiu o s']],
   ['executado_por','Executado por',['executado por']],
   ['teor','Teor (observações técnicas)',['observacoes tecnicas','observacoes']],
-  ['localidade','Localidade',['localidade']]];
+  ['localidade','Localidade (município)',['localidade','municipio','cidade']],
+  ['bairro','Bairro',['bairro']]];
 const F_FIELD = [
   ['numero_os','Cód. protocolo origem (nº da OS)',['cod protocolo origem','protocolo origem']],
   ['matricula','Matrícula',['matricula']],
@@ -918,7 +1021,9 @@ const F_FIELD = [
   ['field_data','Data',['data']],
   ['field_inicio_sla','Início do SLA',['inicio do sla']],
   ['field_fim_sla','Fim do SLA',['fim do sla']],
-  ['field_parecer','Parecer de campo',['parecer de campo']]];
+  ['field_parecer','Parecer de campo',['parecer de campo']],
+  ['field_cidade','Cidade',['cidade','municipio']],
+  ['field_bairro','Bairro',['bairro']]];
 const F_REV = [
   ['numero_requisicao','Nº da requisição',['numero requisicao','numero da requisicao']],
   ['data_entrada','Data da requisição',['data da requisicao']],
@@ -938,8 +1043,8 @@ const KEYS = {
   req:['numero_requisicao','processo_id','titulo','tipo_requisicao','data_requisicao','requisitante','executor','usuario_responsavel','usuario_responsavel_raw','status','grupo','categoria',
     'data_ultima_aprovacao','matricula_os1','responsavel_abertura_os1','data_abertura_os1','numero_os','prazo_os','os_lista','qtd_os','prazo_fatal','prazo_fatal_processo','data_ultima_execucao','data_finalizacao'],
   proc:['processo','matricula','situacao_processo','superintendencia','advogado_interno','causa_raiz_1','causa_raiz_2','historico_atual'],
-  scae:['numero_os','matricula','tipo_os','teor','aberto_por','executado_por','localidade','departamento_atual','ocorrencia','data_abertura','data_encerramento','data_execucao'],
-  field:['numero_os','matricula','status_field','field_data','field_inicio_sla','field_fim_sla','field_parecer'],
+  scae:['numero_os','matricula','tipo_os','teor','aberto_por','executado_por','localidade','bairro','departamento_atual','ocorrencia','data_abertura','data_encerramento','data_execucao'],
+  field:['numero_os','matricula','status_field','field_data','field_inicio_sla','field_fim_sla','field_parecer','field_cidade','field_bairro'],
   rev:['numero_requisicao','processo','data_entrada','data_abertura_os1','data_finalizacao','status','tipo_requisicao','usuarios_responsaveis']};
 const DATES = new Set(['data_requisicao','data_ultima_aprovacao','data_abertura_os1','prazo_os','prazo_fatal','prazo_fatal_processo','data_ultima_execucao','data_finalizacao',
   'historico_atual','data_abertura','data_encerramento','field_data','field_inicio_sla','field_fim_sla','data_entrada']);
@@ -1107,7 +1212,7 @@ function mapPreview(){
   else {
     const recs = buildRecs(P); msg = `${fmtI(recs.length)} registro(s) serão processados.`;
     if (P.tipo==='scae') { const tot = P.rows.length; if (document.getElementById('mpTeam')?.checked) msg += ` ${fmtI(tot-recs.length)} OS(s) de pessoas fora da equipe ficam de fora.`; if (!recs.length) msg += ' Nenhuma OS reconhecida — confira a coluna do usuário ou os apelidos em Equipe & regras.'; }
-    if (P.tipo==='req') msg += ` OS 2 a 5 detectadas: ${osExtras(P.headers).length}.`;
+    if (P.tipo==='req') msg += ` OS 2 a 5 detectadas: ${osExtras(P.headers).length}.${P.fora ? ` ${fmtI(P.fora)} linha(s) de liminar/tutela ou de outro tipo de requisição ficam de fora.` : ''}`;
   }
   document.getElementById('mpPrev').textContent = msg; document.getElementById('mpOk').disabled = !ok;
 }
@@ -1116,12 +1221,13 @@ function buildRecs(P){
   const g = (o,k) => { const h = P.map[k]; if (!h) return null; const v = o[h]; return v==null || String(v).trim()==='' ? null : v; };
   const val = (o,k) => { const v = g(o,k); if (v==null) return null; return DATES.has(k) ? parseDate(v) : cleanTxt(v); };
   const pick = (o, ks) => { const r = {}; ks.forEach(k => r[k] = val(o,k)); return r; };
-  const out = new Map(), F = TIPOS[P.tipo].fields.map(f=>f[0]);
+  const out = new Map(), F = TIPOS[P.tipo].fields.map(f=>f[0]); P.fora = 0;
   if (P.tipo==='req') {
     const extras = osExtras(P.headers);
     P.rows.forEach(o => {
       const r = pick(o, F.filter(k=>k!=='usuario_responsavel'));
       if (!r.numero_requisicao) return;
+      if (!reqPermitida(r)) { P.fora = (P.fora||0) + 1; return; }
       r.chave = r.numero_requisicao;
       r.usuario_responsavel_raw = val(o,'usuario_responsavel');
       if (!normOS(r.numero_os)) r.numero_os = null;
@@ -1195,8 +1301,7 @@ function exportTudo(){
       {name:'Base mãe', rows:toObjs(COLS.base(), R)},
       {name:'Comparativo mensal', rows:toObjs(COLS.mens(), mensRows(R))},
       {name:'Tratamento Grupo 1', rows:toObjs(COLS.trat(), R.filter(r=>r.data_requisicao))},
-      {name:'Triagem Grupo 1', rows:toObjs(COLS.tri(), triagem(R).filter(r=>r._cat!=='Liminar'))},
-      {name:'Triagem Liminares', rows:toObjs(COLS.tri(), triagem(R).filter(r=>r._cat==='Liminar'))},
+      {name:'Triagem Grupo 1', rows:toObjs(COLS.tri(), triagem(R))},
       {name:'OS por membro G1', rows:toObjs(cG1('Membro'), g1Tab(g1Os()).pm)},
       {name:'Solicitação de valores', rows:R.filter(isVal).map(r=>({'Nº requisição':r.numero_requisicao,'Título':r.titulo,'Data da requisição':fmt(r.data_requisicao),'Abertura OS 1':fmt(r.data_abertura_os1),'Tempo de retorno (dias)':r._diasG1??''}))},
       {name:'Foco do dia G2', rows:toObjs(COLS.foco(), focoRows(R))},
